@@ -15,9 +15,6 @@ import com.gambaraja.kokrepot.ui.toolbar.RightToolbar
 
 @Composable
 fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {
-    // Read actionsVersion to subscribe to action list changes
-    val version = viewModel.actionsVersion
-
     Row(modifier = Modifier.fillMaxSize()) {
         LeftToolbar(
             selectedColor = viewModel.selectedColor,

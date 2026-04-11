@@ -85,11 +85,14 @@ The release keystore is committed to `keystore/release.jks` intentionally. Crede
 
 ## Release Process
 
-Push a version tag to trigger the GitHub Actions workflow:
+1. Update `CHANGELOG.md` with the new version, date, and list of changes.
+2. Update `versionCode` and `versionName` in `app/build.gradle.kts`.
+3. Commit the changes.
+4. Push a version tag to trigger the GitHub Actions workflow:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+git tag v1.0.1
+git push origin v1.0.1
 ```
 
 The workflow (`.github/workflows/release.yml`) will build a signed release APK and publish it as a GitHub Release.

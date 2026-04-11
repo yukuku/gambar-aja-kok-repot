@@ -1,7 +1,7 @@
 package com.gambaraja.kokrepot
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -34,11 +34,7 @@ class DrawingViewModel : ViewModel() {
     var currentStrokePoints by mutableStateOf<List<Offset>>(emptyList())
         private set
 
-    // Version counter to trigger recomposition when actions change
-    var actionsVersion by mutableIntStateOf(0)
-        private set
-
-    private val _actions = mutableListOf<DrawingAction>()
+    private val _actions = mutableStateListOf<DrawingAction>()
     val actions: List<DrawingAction> get() = _actions
 
     private val _redoStack = mutableListOf<DrawingAction>()
@@ -87,7 +83,6 @@ class DrawingViewModel : ViewModel() {
         _actions.add(stroke)
         _redoStack.clear()
         currentStrokePoints = emptyList()
-        actionsVersion++
         updateUndoRedo()
     }
 
@@ -107,7 +102,6 @@ class DrawingViewModel : ViewModel() {
             )
             _actions.add(stamp)
             _redoStack.clear()
-            actionsVersion++
             updateUndoRedo()
         } else {
             // Place a dot
@@ -121,7 +115,6 @@ class DrawingViewModel : ViewModel() {
             )
             _actions.add(dot)
             _redoStack.clear()
-            actionsVersion++
             updateUndoRedo()
         }
     }
@@ -134,7 +127,6 @@ class DrawingViewModel : ViewModel() {
         if (_actions.isEmpty()) return
         val last = _actions.removeLast()
         _redoStack.add(last)
-        actionsVersion++
         updateUndoRedo()
     }
 
@@ -142,7 +134,6 @@ class DrawingViewModel : ViewModel() {
         if (_redoStack.isEmpty()) return
         val action = _redoStack.removeLast()
         _actions.add(action)
-        actionsVersion++
         updateUndoRedo()
     }
 

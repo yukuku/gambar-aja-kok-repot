@@ -3,6 +3,8 @@ package com.gambaraja.kokrepot.ui.canvas
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -33,6 +35,8 @@ fun DrawingCanvas(
     onPanDelta: (Offset) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val currentPanOffset by rememberUpdatedState(panOffset)
+
     Canvas(
         modifier = modifier
             .fillMaxSize()
@@ -48,8 +52,8 @@ fun DrawingCanvas(
                         var hasMoved = false
                         val startScreenPos = firstDown.position
                         val startWorldPos = Offset(
-                            startScreenPos.x - panOffset.x,
-                            startScreenPos.y - panOffset.y
+                            startScreenPos.x - currentPanOffset.x,
+                            startScreenPos.y - currentPanOffset.y
                         )
 
                         if (maxPointerCount < 3) {
@@ -113,8 +117,8 @@ fun DrawingCanvas(
                                 !isPanning && currentPointerCount >= 1 -> {
                                     val pos = activeChanges.first().position
                                     val worldPos = Offset(
-                                        pos.x - panOffset.x,
-                                        pos.y - panOffset.y
+                                        pos.x - currentPanOffset.x,
+                                        pos.y - currentPanOffset.y
                                     )
                                     val dx = pos.x - startScreenPos.x
                                     val dy = pos.y - startScreenPos.y
