@@ -22,6 +22,8 @@ fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {
             currentColor = if (viewModel.selectedTool == Tool.ERASER) Color.White else viewModel.selectedColor,
             currentThickness = viewModel.selectedThickness,
             isEraser = viewModel.selectedTool == Tool.ERASER,
+            isStampTool = viewModel.selectedTool.isStamp,
+            stampSize = DrawingViewModel.STAMP_FIXED_SIZE,
             onDrawStart = { viewModel.onDrawStart(it) },
             onDrawMove = { viewModel.onDrawMove(it) },
             onDrawEnd = { viewModel.onDrawEnd() },
@@ -42,6 +44,7 @@ fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {
         RightToolbar(
             selectedThickness = viewModel.selectedThickness,
             selectedTool = viewModel.selectedTool,
+            selectedColor = viewModel.selectedColor,
             canUndo = viewModel.canUndo,
             canRedo = viewModel.canRedo,
             onThicknessSelected = { viewModel.selectThickness(it) },

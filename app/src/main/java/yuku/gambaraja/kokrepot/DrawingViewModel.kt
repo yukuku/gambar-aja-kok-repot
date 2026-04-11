@@ -13,6 +13,10 @@ import yuku.gambaraja.kokrepot.model.Tool
 
 class DrawingViewModel : ViewModel() {
 
+    companion object {
+        const val STAMP_FIXED_SIZE = 50f
+    }
+
     var selectedColor by mutableStateOf(Color.Black)
         private set
 
@@ -48,6 +52,9 @@ class DrawingViewModel : ViewModel() {
 
     fun selectThickness(thickness: Float) {
         selectedThickness = thickness
+        if (selectedTool.isStamp) {
+            selectedTool = Tool.BRUSH
+        }
     }
 
     fun selectTool(tool: Tool) {
@@ -98,7 +105,7 @@ class DrawingViewModel : ViewModel() {
                 center = worldPoint,
                 stampType = stampType,
                 color = selectedColor.toArgb(),
-                size = selectedThickness * 2.5f
+                size = STAMP_FIXED_SIZE
             )
             _actions.add(stamp)
             _redoStack.clear()

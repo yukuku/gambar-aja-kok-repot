@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.0.0] - 2026-04-11
+
+### Changed
+- Package name changed from `com.gambaraja.kokrepot` to `yuku.gambaraja.kokrepot`
+- Toolbar selection state is now much more prominent with full colored background and 1-second blink animation on selection
+- Thickness and stamp selector icon colors now follow the currently selected drawing color
+- Toolbar background adapts to contrast with the selected color for readability
+- Stamp tools and thickness tools are now mutually exclusive — selecting a stamp deselects thickness, and vice versa
+- Stamp size is now fixed (no longer tied to brush thickness)
+- Dragging with a stamp tool now sprinkles stamps continuously with 10dp spacing between edges
+- Upgraded Compose BOM to 2025.12.00 (Compose UI 1.10.0) and Kotlin to 2.1.20
+
 ## [1.0.2] - 2026-04-11
 
 ### Fixed

@@ -50,11 +50,13 @@ fun LeftToolbar(
     onEraserSelected: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val toolbarBg = toolbarBackgroundColor(selectedColor)
+
     Column(
         modifier = modifier
             .fillMaxHeight()
             .width(56.dp)
-            .background(Color(0xFFF0F0F0))
+            .background(toolbarBg)
             .systemBarsPadding()
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -85,7 +87,7 @@ fun LeftToolbar(
 
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            color = Color.LightGray
+            color = contrastingColor(toolbarBg).copy(alpha = 0.2f)
         )
 
         // Eraser button
