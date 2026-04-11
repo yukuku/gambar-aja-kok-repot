@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2] - 2026-04-11
+
+### Fixed
+- Left toolbar no longer gets overdrawn by canvas strokes (toolbars now render above the canvas)
+- Canvas extends fullscreen behind system bars and navigation bar for an immersive drawing experience
+- Stamp toolbar icons now use the same renderer as actual stamps drawn on the canvas
+
 ## [1.0.1] - 2026-04-11
 
 ### Fixed

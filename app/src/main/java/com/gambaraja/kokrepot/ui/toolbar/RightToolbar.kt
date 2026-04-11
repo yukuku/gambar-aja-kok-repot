@@ -1,5 +1,6 @@
 package com.gambaraja.kokrepot.ui.toolbar
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,17 +12,13 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.CropSquare
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,10 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.gambaraja.kokrepot.model.StampType
 import com.gambaraja.kokrepot.model.Tool
+import com.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
 
@@ -54,6 +53,7 @@ fun RightToolbar(
             .fillMaxHeight()
             .width(56.dp)
             .background(Color(0xFFF0F0F0))
+            .systemBarsPadding()
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
@@ -95,19 +95,19 @@ fun RightToolbar(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Stamp buttons
-        StampButton(Icons.Filled.Favorite, "Heart", selectedTool == Tool.STAMP_HEART) {
+        StampButton(StampType.HEART, "Heart", selectedTool == Tool.STAMP_HEART) {
             onToolSelected(Tool.STAMP_HEART)
         }
-        StampButton(Icons.Filled.Star, "Star", selectedTool == Tool.STAMP_STAR) {
+        StampButton(StampType.STAR, "Star", selectedTool == Tool.STAMP_STAR) {
             onToolSelected(Tool.STAMP_STAR)
         }
-        StampButton(Icons.Filled.AutoAwesome, "Spiral", selectedTool == Tool.STAMP_SPIRAL) {
+        StampButton(StampType.SPIRAL, "Spiral", selectedTool == Tool.STAMP_SPIRAL) {
             onToolSelected(Tool.STAMP_SPIRAL)
         }
-        StampButton(Icons.Filled.SentimentSatisfiedAlt, "Smiley", selectedTool == Tool.STAMP_SMILEY) {
+        StampButton(StampType.SMILEY, "Smiley", selectedTool == Tool.STAMP_SMILEY) {
             onToolSelected(Tool.STAMP_SMILEY)
         }
-        StampButton(Icons.Filled.CropSquare, "Square", selectedTool == Tool.STAMP_SQUARE) {
+        StampButton(StampType.SQUARE, "Square", selectedTool == Tool.STAMP_SQUARE) {
             onToolSelected(Tool.STAMP_SQUARE)
         }
 
@@ -140,7 +140,7 @@ fun RightToolbar(
 
 @Composable
 private fun StampButton(
-    icon: ImageVector,
+    stampType: StampType,
     description: String,
     isSelected: Boolean,
     onClick: () -> Unit
@@ -162,11 +162,14 @@ private fun StampButton(
             .clickable { onClick() },
         contentAlignment = Alignment.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = description,
-            tint = if (isSelected) Color(0xFF2196F3) else Color.DarkGray,
-            modifier = Modifier.size(24.dp)
-        )
+        val color = if (isSelected) Color(0xFF2196F3) else Color.DarkGray
+        Canvas(modifier = Modifier.size(24.dp)) {
+            drawStamp(
+                center = Offset(size.width / 2, size.height / 2),
+                stampType = stampType,
+                color = color,
+                size = size.minDimension / 2.5f
+            )
+        }
     }
 }
