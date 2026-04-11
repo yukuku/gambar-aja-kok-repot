@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot.stamp
+package yuku.gambaraja.kokrepot.stamp
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -6,7 +6,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import com.gambaraja.kokrepot.model.StampType
+import yuku.gambaraja.kokrepot.model.StampType
 import kotlin.math.cos
 import kotlin.math.sin
 

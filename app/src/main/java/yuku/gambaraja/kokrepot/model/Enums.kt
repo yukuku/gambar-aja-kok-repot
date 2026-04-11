@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot.model
+package yuku.gambaraja.kokrepot.model
 
 enum class StampType {
     HEART, STAR, SPIRAL, SMILEY, SQUARE

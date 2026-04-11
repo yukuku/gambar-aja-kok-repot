@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot.ui.toolbar
+package yuku.gambaraja.kokrepot.ui.toolbar
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -30,9 +30,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.gambaraja.kokrepot.model.StampType
-import com.gambaraja.kokrepot.model.Tool
-import com.gambaraja.kokrepot.stamp.drawStamp
+import yuku.gambaraja.kokrepot.model.StampType
+import yuku.gambaraja.kokrepot.model.Tool
+import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
 

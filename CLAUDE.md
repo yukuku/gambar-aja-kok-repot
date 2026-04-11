@@ -70,7 +70,7 @@ export ANDROID_SDK_ROOT=/home/user/android-sdk
 ## Project Structure
 
 ```
-app/src/main/java/com/gambaraja/kokrepot/
+app/src/main/java/yuku/gambaraja/kokrepot/
 ├── MainActivity.kt              # Single activity, edge-to-edge
 ├── DrawingApp.kt                # Root composable: LeftToolbar | Canvas | RightToolbar
 ├── DrawingViewModel.kt          # State: actions list, undo/redo, tool/color/thickness, pan offset

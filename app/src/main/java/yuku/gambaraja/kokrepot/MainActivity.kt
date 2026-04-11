@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot
+package yuku.gambaraja.kokrepot
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity

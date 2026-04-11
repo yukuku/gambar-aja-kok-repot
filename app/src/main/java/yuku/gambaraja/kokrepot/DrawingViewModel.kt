@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot
+package yuku.gambaraja.kokrepot
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -8,8 +8,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
-import com.gambaraja.kokrepot.model.DrawingAction
-import com.gambaraja.kokrepot.model.Tool
+import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.model.Tool
 
 class DrawingViewModel : ViewModel() {
 

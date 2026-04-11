@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot.model
+package yuku.gambaraja.kokrepot.model
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect

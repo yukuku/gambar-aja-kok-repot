@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot
+package yuku.gambaraja.kokrepot
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,10 +7,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gambaraja.kokrepot.model.Tool
-import com.gambaraja.kokrepot.ui.canvas.DrawingCanvas
-import com.gambaraja.kokrepot.ui.toolbar.LeftToolbar
-import com.gambaraja.kokrepot.ui.toolbar.RightToolbar
+import yuku.gambaraja.kokrepot.model.Tool
+import yuku.gambaraja.kokrepot.ui.canvas.DrawingCanvas
+import yuku.gambaraja.kokrepot.ui.toolbar.LeftToolbar
+import yuku.gambaraja.kokrepot.ui.toolbar.RightToolbar
 
 @Composable
 fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {

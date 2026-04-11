@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot.ui.canvas
+package yuku.gambaraja.kokrepot.ui.canvas
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,8 +16,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import com.gambaraja.kokrepot.model.DrawingAction
-import com.gambaraja.kokrepot.stamp.drawStamp
+import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 @Composable
 fun DrawingCanvas(

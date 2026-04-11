@@ -14,11 +14,11 @@ val keystoreProperties = Properties().apply {
 }
 
 android {
-    namespace = "com.gambaraja.kokrepot"
+    namespace = "yuku.gambaraja.kokrepot"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.gambaraja.kokrepot"
+        applicationId = "yuku.gambaraja.kokrepot"
         minSdk = 29
         targetSdk = 35
         versionCode = 3
