@@ -1,9 +1,10 @@
-package com.gambaraja.kokrepot.ui.canvas
+package yuku.gambaraja.kokrepot.ui.canvas
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -16,8 +17,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
-import com.gambaraja.kokrepot.model.DrawingAction
-import com.gambaraja.kokrepot.stamp.drawStamp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 @Composable
 fun DrawingCanvas(
@@ -27,6 +30,8 @@ fun DrawingCanvas(
     currentColor: Color,
     currentThickness: Float,
     isEraser: Boolean,
+    isStampTool: Boolean,
+    stampSize: Float,
     onDrawStart: (Offset) -> Unit,
     onDrawMove: (Offset) -> Unit,
     onDrawEnd: () -> Unit,
@@ -36,6 +41,12 @@ fun DrawingCanvas(
     modifier: Modifier = Modifier
 ) {
     val currentPanOffset by rememberUpdatedState(panOffset)
+    val currentIsStampTool by rememberUpdatedState(isStampTool)
+    val density = LocalDensity.current
+    val stampMinDistance = remember(stampSize, density) {
+        stampSize * 2 + with(density) { 10.dp.toPx() }
+    }
+    val currentStampMinDistance by rememberUpdatedState(stampMinDistance)
 
     Canvas(
         modifier = modifier
@@ -56,8 +67,15 @@ fun DrawingCanvas(
                             startScreenPos.y - currentPanOffset.y
                         )
 
+                        var lastStampPos: Offset? = null
+
                         if (maxPointerCount < 3) {
-                            onDrawStart(startWorldPos)
+                            if (currentIsStampTool) {
+                                onTap(startWorldPos)
+                                lastStampPos = startWorldPos
+                            } else {
+                                onDrawStart(startWorldPos)
+                            }
                         }
 
                         var lastPanCentroid = if (maxPointerCount >= 3) {
@@ -94,7 +112,7 @@ fun DrawingCanvas(
 
                             when {
                                 currentPointerCount == 0 -> {
-                                    if (!isPanning) {
+                                    if (!isPanning && !currentIsStampTool) {
                                         if (!hasMoved) {
                                             onDrawCancel()
                                             onTap(startWorldPos)
@@ -120,12 +138,23 @@ fun DrawingCanvas(
                                         pos.x - currentPanOffset.x,
                                         pos.y - currentPanOffset.y
                                     )
-                                    val dx = pos.x - startScreenPos.x
-                                    val dy = pos.y - startScreenPos.y
-                                    if (dx * dx + dy * dy > 64f) {
-                                        hasMoved = true
+                                    if (currentIsStampTool) {
+                                        val last = lastStampPos
+                                        if (last != null) {
+                                            val distance = (worldPos - last).getDistance()
+                                            if (distance >= currentStampMinDistance) {
+                                                onTap(worldPos)
+                                                lastStampPos = worldPos
+                                            }
+                                        }
+                                    } else {
+                                        val dx = pos.x - startScreenPos.x
+                                        val dy = pos.y - startScreenPos.y
+                                        if (dx * dx + dy * dy > 64f) {
+                                            hasMoved = true
+                                        }
+                                        onDrawMove(worldPos)
                                     }
-                                    onDrawMove(worldPos)
                                 }
                             }
                             event.changes.forEach { it.consume() }

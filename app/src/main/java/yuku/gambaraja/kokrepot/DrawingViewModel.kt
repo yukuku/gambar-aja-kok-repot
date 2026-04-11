@@ -1,4 +1,4 @@
-package com.gambaraja.kokrepot
+package yuku.gambaraja.kokrepot
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -8,10 +8,14 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.ViewModel
-import com.gambaraja.kokrepot.model.DrawingAction
-import com.gambaraja.kokrepot.model.Tool
+import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.model.Tool
 
 class DrawingViewModel : ViewModel() {
+
+    companion object {
+        const val STAMP_FIXED_SIZE = 50f
+    }
 
     var selectedColor by mutableStateOf(Color.Black)
         private set
@@ -48,6 +52,9 @@ class DrawingViewModel : ViewModel() {
 
     fun selectThickness(thickness: Float) {
         selectedThickness = thickness
+        if (selectedTool.isStamp) {
+            selectedTool = Tool.BRUSH
+        }
     }
 
     fun selectTool(tool: Tool) {
@@ -98,7 +105,7 @@ class DrawingViewModel : ViewModel() {
                 center = worldPoint,
                 stampType = stampType,
                 color = selectedColor.toArgb(),
-                size = selectedThickness * 2.5f
+                size = STAMP_FIXED_SIZE
             )
             _actions.add(stamp)
             _redoStack.clear()
