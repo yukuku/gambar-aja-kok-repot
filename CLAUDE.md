@@ -16,23 +16,49 @@ The release APK is output to `app/build/outputs/apk/release/app-release.apk`.
 
 ### Android SDK setup (for environments without it)
 
-The default build machine does not have the Android SDK installed. Claude must install it before building:
+The default build machine does not have the Android SDK pre-configured. Claude must set it up before building. The `sdkmanager` may not work due to proxy settings in `JAVA_TOOL_OPTIONS`, so download SDK packages manually with `curl`:
 
 ```bash
-cd /opt
-curl -fsSL -o cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
-unzip -q cmdline-tools.zip
-mkdir -p /opt/android-sdk/cmdline-tools
-mv cmdline-tools /opt/android-sdk/cmdline-tools/latest
-export ANDROID_HOME=/opt/android-sdk
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
-yes | sdkmanager --licenses
-sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+ANDROID_HOME=/home/user/android-sdk
+mkdir -p $ANDROID_HOME/build-tools $ANDROID_HOME/platforms
+
+# Platform tools
+curl -sL "https://dl.google.com/android/repository/platform-tools-latest-linux.zip" -o /tmp/platform-tools.zip
+cd $ANDROID_HOME && unzip -qo /tmp/platform-tools.zip
+
+# Build tools 35.0.0 (required by compileSdk 35)
+curl -sL "https://dl.google.com/android/repository/build-tools_r35_linux.zip" -o /tmp/build-tools-35.zip
+cd /tmp && unzip -qo build-tools-35.zip && mv android-*/ $ANDROID_HOME/build-tools/35.0.0
+
+# Build tools 34.0.0 (required by AGP 8.7.3 internally)
+curl -sL "https://dl.google.com/android/repository/build-tools_r34-linux.zip" -o /tmp/build-tools-34.zip
+cd /tmp && unzip -qo build-tools-34.zip && mv android-*/ $ANDROID_HOME/build-tools/34.0.0
+
+# Platform android-35
+curl -sL "https://dl.google.com/android/repository/platform-35_r02.zip" -o /tmp/platform-35.zip
+cd /tmp && unzip -qo platform-35.zip && mv android-*/ $ANDROID_HOME/platforms/android-35
+
+# Accept licenses
+mkdir -p $ANDROID_HOME/cmdline-tools/latest/bin && yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
+mkdir -p $ANDROID_HOME/licenses
+echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $ANDROID_HOME/licenses/android-sdk-license
+
+# Point Gradle to the SDK
+echo "sdk.dir=$ANDROID_HOME" > /home/user/gambar-aja-kok-repot/local.properties
+```
+
+**Important:** Unset `JAVA_TOOL_OPTIONS` before running Gradle to avoid proxy interference:
+
+```bash
+unset JAVA_TOOL_OPTIONS
+export ANDROID_HOME=/home/user/android-sdk
+export ANDROID_SDK_ROOT=/home/user/android-sdk
+./gradlew assembleDebug
 ```
 
 ### Build verification requirement
 
-**All code changes must compile before committing and pushing.** Claude must run `./gradlew assembleDebug` (installing the Android SDK first if needed) and confirm the build succeeds before creating any commit, push, or PR.
+**All code changes must compile before committing and pushing.** Claude must install the Android SDK (if not already set up) and run `./gradlew assembleDebug` to confirm the build succeeds before creating any commit, push, or PR.
 
 ## Requirements
 
