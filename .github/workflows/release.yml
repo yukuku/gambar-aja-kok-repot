@@ -2,6 +2,7 @@ name: Build and Release APK
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
 
@@ -31,9 +32,15 @@ jobs:
       - name: Build Release APK
         run: ./gradlew assembleRelease
 
-      - name: Get version from tag
+      - name: Get version
         id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            echo "VERSION=v${VERSION}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
