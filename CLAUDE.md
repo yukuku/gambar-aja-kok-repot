@@ -58,7 +58,7 @@ export ANDROID_SDK_ROOT=/home/user/android-sdk
 
 ### Build verification requirement
 
-**All code changes must compile before committing and pushing.** Claude must install the Android SDK (if not already set up) and run `./gradlew assembleDebug` to confirm the build succeeds before creating any commit, push, or PR.
+**All code changes must compile before committing and pushing.** Claude must install the Android SDK (if not already set up) and run both `./gradlew assembleDebug` and `./gradlew assembleRelease` to confirm the builds succeed before creating any commit, push, or PR. The release build includes lint checks and R8 minification that can catch issues not found in the debug build.
 
 ## Requirements
 
