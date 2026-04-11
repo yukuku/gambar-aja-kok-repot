@@ -58,17 +58,17 @@ app/src/main/java/com/gambaraja/kokrepot/
 ## UI Layout
 
 ```
-┌──────────┬─────────────────────────────────┬──────────┐
-│  Left    │                                 │  Right   │
-│ Toolbar  │        Drawing Canvas           │ Toolbar  │
-│          │       (white background)        │          │
-│ 12 color │                                 │ 5 thick  │
-│ circles  │    1-finger: draw/stamp         │ ─────── │
-│          │    3-finger: pan                │ 5 stamps │
-│ ──────── │                                 │ ─────── │
-│ Eraser   │                                 │ Undo     │
-│          │                                 │ Redo     │
-└──────────┴─────────────────────────────────┴──────────┘
++----------+---------------------------------+----------+
+|  Left    |                                 |  Right   |
+| Toolbar  |        Drawing Canvas           | Toolbar  |
+|          |       (white background)        |          |
+| 12 color |                                 | 5 thick  |
+| circles  |    1-finger: draw/stamp         | -------- |
+|          |    3-finger: pan                | 5 stamps |
+| -------- |                                 | -------- |
+| Eraser   |                                 | Undo     |
+|          |                                 | Redo     |
++----------+---------------------------------+----------+
 ```
 
 ### Left toolbar
