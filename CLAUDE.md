@@ -137,3 +137,4 @@ Claude (the AI assistant) is responsible for triggering releases. The user provi
 2. Update `versionCode` (increment by 1) and `versionName` in `app/build.gradle.kts`.
 3. Commit and push the changes to a feature branch.
 4. Create a PR to `main` and merge it. The push to `main` triggers the GitHub Actions workflow (`.github/workflows/release.yml`), which builds a signed release APK and publishes it as a GitHub Release with the version from `build.gradle.kts`.
+5. **After releasing, always merge the feature branch to `main`.** This is mandatory — never leave a release branch unmerged.
