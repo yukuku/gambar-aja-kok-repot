@@ -14,6 +14,26 @@ A toddler-friendly drawing app for Android, built with Jetpack Compose.
 
 The release APK is output to `app/build/outputs/apk/release/app-release.apk`.
 
+### Android SDK setup (for environments without it)
+
+The default build machine does not have the Android SDK installed. Claude must install it before building:
+
+```bash
+cd /opt
+curl -fsSL -o cmdline-tools.zip "https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip"
+unzip -q cmdline-tools.zip
+mkdir -p /opt/android-sdk/cmdline-tools
+mv cmdline-tools /opt/android-sdk/cmdline-tools/latest
+export ANDROID_HOME=/opt/android-sdk
+export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+yes | sdkmanager --licenses
+sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+```
+
+### Build verification requirement
+
+**All code changes must compile before committing and pushing.** Claude must run `./gradlew assembleDebug` (installing the Android SDK first if needed) and confirm the build succeeds before creating any commit, push, or PR.
+
 ## Requirements
 
 - **JDK**: 17+
