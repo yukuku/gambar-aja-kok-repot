@@ -85,14 +85,9 @@ The release keystore is committed to `keystore/release.jks` intentionally. Crede
 
 ## Release Process
 
+Claude (the AI assistant) is responsible for triggering releases. The user provides the version number when requesting a release. Steps:
+
 1. Update `CHANGELOG.md` with the new version, date, and list of changes.
-2. Update `versionCode` and `versionName` in `app/build.gradle.kts`.
-3. Commit the changes.
-4. Push a version tag to trigger the GitHub Actions workflow:
-
-```bash
-git tag v1.0.1
-git push origin v1.0.1
-```
-
-The workflow (`.github/workflows/release.yml`) will build a signed release APK and publish it as a GitHub Release.
+2. Update `versionCode` (increment by 1) and `versionName` in `app/build.gradle.kts`.
+3. Commit and push the changes to a feature branch.
+4. Create a PR to `main` and merge it. The push to `main` triggers the GitHub Actions workflow (`.github/workflows/release.yml`), which builds a signed release APK and publishes it as a GitHub Release with the version from `build.gradle.kts`.
