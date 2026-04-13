@@ -13,7 +13,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -32,6 +34,14 @@ import yuku.gambaraja.kokrepot.model.Tool
 import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
+
+private val stampTools = listOf(
+    Tool.STAMP_HEART to StampType.HEART,
+    Tool.STAMP_STAR to StampType.STAR,
+    Tool.STAMP_SPIRAL to StampType.SPIRAL,
+    Tool.STAMP_SMILEY to StampType.SMILEY,
+    Tool.STAMP_SQUARE to StampType.SQUARE,
+)
 
 @Composable
 fun RightToolbar(
@@ -54,17 +64,20 @@ fun RightToolbar(
     val iconBorderColor = borderForToolColor(iconColor)
     val dividerColor = Color.Black.copy(alpha = 0.15f)
 
+    val scrollState = rememberScrollState()
+
     Column(
         modifier = modifier
             .fillMaxHeight()
             .width(56.dp)
             .background(ToolbarBackground)
             .systemBarsPadding()
+            .verticalScroll(scrollState)
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Thickness buttons — unselected when a stamp tool is active
+        // Thickness buttons — unselected when a stamp tool is active.
         thicknesses.forEach { thickness ->
             val isSelected = thickness == selectedThickness && !isStampMode
             AnimatedToolButton(
@@ -82,22 +95,22 @@ fun RightToolbar(
             }
         }
 
+        // Stamps are meaningless while the eraser is active (you can't stamp
+        // with an eraser), so hide the whole stamp section in that case.
+        if (!isEraserSelected) {
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 8.dp),
+                color = dividerColor
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+
+            stampTools.forEach { (tool, stampType) ->
+                StampToolButton(tool, stampType, selectedTool, iconColor, iconBorderColor, onToolSelected)
+            }
+        }
+
         Spacer(modifier = Modifier.height(4.dp))
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 8.dp),
-            color = dividerColor
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Stamp buttons
-        StampToolButton(Tool.STAMP_HEART, StampType.HEART, selectedTool, iconColor, iconBorderColor, onToolSelected)
-        StampToolButton(Tool.STAMP_STAR, StampType.STAR, selectedTool, iconColor, iconBorderColor, onToolSelected)
-        StampToolButton(Tool.STAMP_SPIRAL, StampType.SPIRAL, selectedTool, iconColor, iconBorderColor, onToolSelected)
-        StampToolButton(Tool.STAMP_SMILEY, StampType.SMILEY, selectedTool, iconColor, iconBorderColor, onToolSelected)
-        StampToolButton(Tool.STAMP_SQUARE, StampType.SQUARE, selectedTool, iconColor, iconBorderColor, onToolSelected)
-
-        Spacer(modifier = Modifier.weight(1f))
-
         HorizontalDivider(
             modifier = Modifier.padding(horizontal = 8.dp),
             color = dividerColor
