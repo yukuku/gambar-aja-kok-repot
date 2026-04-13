@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.1] - 2026-04-13
+
+### Changed
+- Eraser icon redrawn to look like a classic tilted rubber eraser — coral body with a yellow stripe running along its length and a white "rubber" cap at the end
+- Heart stamp body is now plumper and rounder (fuller lobes, more pronounced tip)
+- Stamp selection borders now follow each stamp's own silhouette (heart, star, square, spiral curve, smiley face) instead of a square rounded-rectangle around the button
+
 ## [2.1.0] - 2026-04-13
 
 ### Changed

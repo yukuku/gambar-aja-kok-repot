@@ -28,6 +28,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
 
 val toddlerColors = listOf(
@@ -102,53 +103,107 @@ fun LeftToolbar(
     }
 }
 
+/**
+ * A tilted eraser: a long rounded rectangle rotated roughly -35°, with a
+ * coral/red main body, a yellow stripe running lengthwise through the body,
+ * and a white "rubber" cap at the low end. Heavy dark outlines on every piece.
+ */
 @Composable
 private fun EraserIcon(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
         val w = size.width
         val h = size.height
-        val rectLeft = w * 0.1f
-        val rectRight = w * 0.9f
-        val rectTop = h * 0.28f
-        val rectBottom = h * 0.78f
-        val split = rectTop + (rectBottom - rectTop) * 0.58f
-        val cornerR = (rectRight - rectLeft) * 0.18f
+        val cx = w / 2f
+        val cy = h / 2f
 
-        // Pink top body (classic school-eraser look) with top-rounded corners.
-        val topPath = Path().apply {
-            addRoundRect(
-                RoundRect(
-                    Rect(rectLeft, rectTop, rectRight, split),
-                    topLeft = CornerRadius(cornerR, cornerR),
-                    topRight = CornerRadius(cornerR, cornerR),
-                    bottomLeft = CornerRadius.Zero,
-                    bottomRight = CornerRadius.Zero
+        val outlineColor = Color(0xFF2F2F3A)
+        val redColor = Color(0xFFE57373)
+        val yellowColor = Color(0xFFFFE082)
+        val strokePx = (w * 0.055f).coerceAtLeast(1.5f)
+
+        rotate(degrees = -35f, pivot = Offset(cx, cy)) {
+            // Overall eraser bounds (pre-rotation).
+            // Slightly less than full width/height so that the 35° rotation
+            // doesn't push the corners (or the outline stroke) outside the
+            // Canvas bounds.
+            val bodyW = w * 0.85f
+            val bodyH = h * 0.32f
+            val left = cx - bodyW / 2f
+            val right = cx + bodyW / 2f
+            val top = cy - bodyH / 2f
+            val bottom = cy + bodyH / 2f
+            val corner = bodyH * 0.22f
+
+            // The low-left end is the white "rubber" cap — about the first 30%.
+            val capRight = left + bodyW * 0.30f
+            // The yellow stripe runs horizontally through the middle of the red part.
+            val stripeTop = top + bodyH * 0.36f
+            val stripeBottom = bottom - bodyH * 0.36f
+
+            // --- White cap ---
+            val capPath = Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        Rect(left, top, capRight, bottom),
+                        topLeft = CornerRadius(corner, corner),
+                        bottomLeft = CornerRadius(corner, corner),
+                        topRight = CornerRadius.Zero,
+                        bottomRight = CornerRadius.Zero,
+                    )
                 )
+            }
+            drawPath(capPath, Color.White)
+
+            // --- Red body ---
+            val bodyPath = Path().apply {
+                addRoundRect(
+                    RoundRect(
+                        Rect(capRight, top, right, bottom),
+                        topLeft = CornerRadius.Zero,
+                        bottomLeft = CornerRadius.Zero,
+                        topRight = CornerRadius(corner, corner),
+                        bottomRight = CornerRadius(corner, corner),
+                    )
+                )
+            }
+            drawPath(bodyPath, redColor)
+
+            // --- Yellow stripe across the red body ---
+            drawRect(
+                color = yellowColor,
+                topLeft = Offset(capRight, stripeTop),
+                size = Size(right - capRight, stripeBottom - stripeTop),
+            )
+
+            // --- Outlines ---
+            // Full body outline (rounded rectangle around white + red).
+            drawRoundRect(
+                color = outlineColor,
+                topLeft = Offset(left, top),
+                size = Size(bodyW, bodyH),
+                cornerRadius = CornerRadius(corner, corner),
+                style = Stroke(width = strokePx),
+            )
+            // Divider between white cap and red body.
+            drawLine(
+                color = outlineColor,
+                start = Offset(capRight, top),
+                end = Offset(capRight, bottom),
+                strokeWidth = strokePx,
+            )
+            // Top and bottom edges of the yellow stripe.
+            drawLine(
+                color = outlineColor,
+                start = Offset(capRight, stripeTop),
+                end = Offset(right, stripeTop),
+                strokeWidth = strokePx,
+            )
+            drawLine(
+                color = outlineColor,
+                start = Offset(capRight, stripeBottom),
+                end = Offset(right, stripeBottom),
+                strokeWidth = strokePx,
             )
         }
-        drawPath(topPath, Color(0xFFF06292))
-
-        // Blue bottom band with bottom-rounded corners.
-        val bottomPath = Path().apply {
-            addRoundRect(
-                RoundRect(
-                    Rect(rectLeft, split, rectRight, rectBottom),
-                    topLeft = CornerRadius.Zero,
-                    topRight = CornerRadius.Zero,
-                    bottomLeft = CornerRadius(cornerR, cornerR),
-                    bottomRight = CornerRadius(cornerR, cornerR)
-                )
-            )
-        }
-        drawPath(bottomPath, Color(0xFF64B5F6))
-
-        // Outline
-        drawRoundRect(
-            color = Color(0xFF424242),
-            topLeft = Offset(rectLeft, rectTop),
-            size = Size(rectRight - rectLeft, rectBottom - rectTop),
-            cornerRadius = CornerRadius(cornerR, cornerR),
-            style = Stroke(width = 1.5f)
-        )
     }
 }
