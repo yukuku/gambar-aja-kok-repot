@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.1.0] - 2026-04-13
+
+### Changed
+- Toolbar backgrounds no longer flip between light and dark when the drawing color changes — they stay on a fixed light-grey background
+- Each tool (color, thickness, stamp) now has a 1dp contrasting border so it stays visible against the toolbar no matter what color it uses
+- Selection indicator is now a dark-grey background behind the selected tool; thickness and stamp icons no longer invert to black/white when selected
+- Selecting a color tool now triggers the same brief blinking selection animation as thickness and stamp tools
+- Thickness and stamp icons now render white while the eraser is the active tool, hinting that the eraser paints white
+- Undo/redo icons are now permanently black (matching the new fixed background)
+
+### Fixed
+- Eraser icon redrawn as a classic pink-and-blue school eraser instead of the previous generic layers-clear icon
+- Selection blink animation no longer plays for the default tool at app startup — it now plays only in response to user taps
+- Redo button fully hides its icon when redo is unavailable instead of showing a greyed-out arrow
+
 ## [2.0.0] - 2026-04-11
 
 ### Changed
