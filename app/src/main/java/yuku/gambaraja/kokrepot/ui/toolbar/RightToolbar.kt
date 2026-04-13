@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -139,21 +138,17 @@ private fun StampToolButton(
         isSelected = selectedTool == tool,
         onClick = { onToolSelected(tool) }
     ) {
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .border(1.dp, borderColor, RoundedCornerShape(6.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(
-                    Offset(size.width / 2, size.height / 2),
-                    stampType,
-                    iconColor,
-                    size.minDimension / 2.5f
-                )
-            }
+        // Draw the stamp directly — the outline follows the stamp's own shape
+        // (heart silhouette, star points, square edges, etc.) rather than a
+        // square bounding box.
+        Canvas(modifier = Modifier.size(26.dp)) {
+            drawStamp(
+                center = Offset(size.width / 2, size.height / 2),
+                stampType = stampType,
+                color = iconColor,
+                size = size.minDimension / 2.5f,
+                borderColor = borderColor,
+            )
         }
     }
 }
