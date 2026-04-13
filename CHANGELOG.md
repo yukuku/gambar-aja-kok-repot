@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.2] - 2026-04-13
+
+### Changed
+- Right toolbar is now scrollable when the screen is too short to show every tool (e.g. landscape). Thickness, stamps, and undo/redo all scroll together — nothing is pinned.
+
+### Fixed
+- Stamp buttons now hide while the eraser is the active tool, since you can't stamp with an eraser anyway.
+
 ## [2.1.1] - 2026-04-13
 
 ### Changed
