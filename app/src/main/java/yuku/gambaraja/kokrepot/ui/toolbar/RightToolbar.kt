@@ -1,10 +1,8 @@
 package yuku.gambaraja.kokrepot.ui.toolbar
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,12 +22,9 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -39,21 +34,12 @@ import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
 
-fun toolbarBackgroundColor(selectedColor: Color): Color {
-    val luminance = 0.2126f * selectedColor.red + 0.7152f * selectedColor.green + 0.0722f * selectedColor.blue
-    return if (luminance > 0.5f) Color(0xFF3A3A3A) else Color(0xFFF0F0F0)
-}
-
-fun contrastingColor(color: Color): Color {
-    val luminance = 0.2126f * color.red + 0.7152f * color.green + 0.0722f * color.blue
-    return if (luminance > 0.5f) Color.White else Color.Black
-}
-
 @Composable
 fun RightToolbar(
     selectedThickness: Float,
     selectedTool: Tool,
     selectedColor: Color,
+    isEraserSelected: Boolean,
     canUndo: Boolean,
     canRedo: Boolean,
     onThicknessSelected: (Float) -> Unit,
@@ -62,16 +48,18 @@ fun RightToolbar(
     onRedo: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val toolbarBg = toolbarBackgroundColor(selectedColor)
     val isStampMode = selectedTool.isStamp
-    val contentColor = contrastingColor(toolbarBg)
-    val dividerColor = contentColor.copy(alpha = 0.2f)
+    // When the eraser is active, thickness/stamp icons render white so they
+    // read as "the eraser paints white".
+    val iconColor = if (isEraserSelected) Color.White else selectedColor
+    val iconBorderColor = borderForToolColor(iconColor)
+    val dividerColor = Color.Black.copy(alpha = 0.15f)
 
     Column(
         modifier = modifier
             .fillMaxHeight()
             .width(56.dp)
-            .background(toolbarBg)
+            .background(ToolbarBackground)
             .systemBarsPadding()
             .padding(vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -82,14 +70,15 @@ fun RightToolbar(
             val isSelected = thickness == selectedThickness && !isStampMode
             AnimatedToolButton(
                 isSelected = isSelected,
-                selectedColor = selectedColor,
                 onClick = { onThicknessSelected(thickness) }
-            ) { iconColor ->
+            ) {
+                val dotSize = thickness.coerceAtMost(28f).dp
                 Box(
                     modifier = Modifier
-                        .size((thickness.coerceAtMost(28f)).dp)
+                        .size(dotSize)
                         .clip(CircleShape)
                         .background(iconColor, CircleShape)
+                        .border(1.dp, iconBorderColor, CircleShape)
                 )
             }
         }
@@ -101,52 +90,12 @@ fun RightToolbar(
         )
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Stamp buttons — use actual stamp rendering from v1.0.2
-        AnimatedToolButton(
-            isSelected = selectedTool == Tool.STAMP_HEART,
-            selectedColor = selectedColor,
-            onClick = { onToolSelected(Tool.STAMP_HEART) }
-        ) { iconColor ->
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(Offset(size.width / 2, size.height / 2), StampType.HEART, iconColor, size.minDimension / 2.5f)
-            }
-        }
-        AnimatedToolButton(
-            isSelected = selectedTool == Tool.STAMP_STAR,
-            selectedColor = selectedColor,
-            onClick = { onToolSelected(Tool.STAMP_STAR) }
-        ) { iconColor ->
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(Offset(size.width / 2, size.height / 2), StampType.STAR, iconColor, size.minDimension / 2.5f)
-            }
-        }
-        AnimatedToolButton(
-            isSelected = selectedTool == Tool.STAMP_SPIRAL,
-            selectedColor = selectedColor,
-            onClick = { onToolSelected(Tool.STAMP_SPIRAL) }
-        ) { iconColor ->
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(Offset(size.width / 2, size.height / 2), StampType.SPIRAL, iconColor, size.minDimension / 2.5f)
-            }
-        }
-        AnimatedToolButton(
-            isSelected = selectedTool == Tool.STAMP_SMILEY,
-            selectedColor = selectedColor,
-            onClick = { onToolSelected(Tool.STAMP_SMILEY) }
-        ) { iconColor ->
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(Offset(size.width / 2, size.height / 2), StampType.SMILEY, iconColor, size.minDimension / 2.5f)
-            }
-        }
-        AnimatedToolButton(
-            isSelected = selectedTool == Tool.STAMP_SQUARE,
-            selectedColor = selectedColor,
-            onClick = { onToolSelected(Tool.STAMP_SQUARE) }
-        ) { iconColor ->
-            Canvas(modifier = Modifier.size(24.dp)) {
-                drawStamp(Offset(size.width / 2, size.height / 2), StampType.SQUARE, iconColor, size.minDimension / 2.5f)
-            }
-        }
+        // Stamp buttons
+        StampToolButton(Tool.STAMP_HEART, StampType.HEART, selectedTool, iconColor, iconBorderColor, onToolSelected)
+        StampToolButton(Tool.STAMP_STAR, StampType.STAR, selectedTool, iconColor, iconBorderColor, onToolSelected)
+        StampToolButton(Tool.STAMP_SPIRAL, StampType.SPIRAL, selectedTool, iconColor, iconBorderColor, onToolSelected)
+        StampToolButton(Tool.STAMP_SMILEY, StampType.SMILEY, selectedTool, iconColor, iconBorderColor, onToolSelected)
+        StampToolButton(Tool.STAMP_SQUARE, StampType.SQUARE, selectedTool, iconColor, iconBorderColor, onToolSelected)
 
         Spacer(modifier = Modifier.weight(1f))
 
@@ -156,56 +105,55 @@ fun RightToolbar(
         )
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Undo
+        // Undo — always black when enabled.
         IconButton(onClick = onUndo, enabled = canUndo) {
             Icon(
                 Icons.AutoMirrored.Filled.Undo,
                 contentDescription = "Undo",
-                tint = if (canUndo) contentColor else contentColor.copy(alpha = 0.3f)
+                tint = if (canUndo) Color.Black else Color.Black.copy(alpha = 0.3f)
             )
         }
-        // Redo
+        // Redo — if disabled, hide the icon entirely (keep the slot so layout is stable).
         IconButton(onClick = onRedo, enabled = canRedo) {
-            Icon(
-                Icons.AutoMirrored.Filled.Redo,
-                contentDescription = "Redo",
-                tint = if (canRedo) contentColor else contentColor.copy(alpha = 0.3f)
-            )
+            if (canRedo) {
+                Icon(
+                    Icons.AutoMirrored.Filled.Redo,
+                    contentDescription = "Redo",
+                    tint = Color.Black
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun AnimatedToolButton(
-    isSelected: Boolean,
-    selectedColor: Color,
-    onClick: () -> Unit,
-    content: @Composable (Color) -> Unit
+private fun StampToolButton(
+    tool: Tool,
+    stampType: StampType,
+    selectedTool: Tool,
+    iconColor: Color,
+    borderColor: Color,
+    onToolSelected: (Tool) -> Unit,
 ) {
-    val blinkAlpha = remember { Animatable(1f) }
-
-    LaunchedEffect(isSelected) {
-        if (isSelected) {
-            blinkAlpha.snapTo(1f)
-            repeat(5) {
-                blinkAlpha.animateTo(0.2f, tween(100))
-                blinkAlpha.animateTo(1f, tween(100))
+    AnimatedToolButton(
+        isSelected = selectedTool == tool,
+        onClick = { onToolSelected(tool) }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .border(1.dp, borderColor, RoundedCornerShape(6.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Canvas(modifier = Modifier.size(24.dp)) {
+                drawStamp(
+                    Offset(size.width / 2, size.height / 2),
+                    stampType,
+                    iconColor,
+                    size.minDimension / 2.5f
+                )
             }
         }
-    }
-
-    val bgColor = if (isSelected) selectedColor.copy(alpha = blinkAlpha.value) else Color.Transparent
-    val iconColor = if (isSelected) contrastingColor(selectedColor) else selectedColor
-
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .scale(if (isSelected) 1.1f else 1f)
-            .clip(RoundedCornerShape(8.dp))
-            .background(bgColor, RoundedCornerShape(8.dp))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center
-    ) {
-        content(iconColor)
     }
 }

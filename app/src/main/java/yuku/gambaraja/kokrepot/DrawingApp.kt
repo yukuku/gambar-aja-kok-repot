@@ -45,6 +45,7 @@ fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {
             selectedThickness = viewModel.selectedThickness,
             selectedTool = viewModel.selectedTool,
             selectedColor = viewModel.selectedColor,
+            isEraserSelected = viewModel.selectedTool == Tool.ERASER,
             canUndo = viewModel.canUndo,
             canRedo = viewModel.canRedo,
             onThicknessSelected = { viewModel.selectThickness(it) },
