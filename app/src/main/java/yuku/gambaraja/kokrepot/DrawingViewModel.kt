@@ -1,5 +1,6 @@
 package yuku.gambaraja.kokrepot
 
+import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -7,11 +8,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.lifecycle.ViewModel
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import yuku.gambaraja.kokrepot.model.DrawingAction
 import yuku.gambaraja.kokrepot.model.Tool
 
-class DrawingViewModel : ViewModel() {
+class DrawingViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         const val STAMP_FIXED_SIZE = 50f
@@ -42,6 +47,20 @@ class DrawingViewModel : ViewModel() {
     val actions: List<DrawingAction> get() = _actions
 
     private val _redoStack = mutableListOf<DrawingAction>()
+
+    private val storage = DrawingStorage(application)
+    private var saveJob: Job? = null
+
+    init {
+        // Restore the last saved drawing so the toddler's art survives the app
+        // being closed or killed. No "load" UI — it's always on.
+        val snapshot = storage.load()
+        if (snapshot != null) {
+            _actions.addAll(snapshot.actions)
+            panOffset = snapshot.panOffset
+            updateUndoRedo()
+        }
+    }
 
     fun selectColor(color: Color) {
         selectedColor = color
@@ -91,6 +110,7 @@ class DrawingViewModel : ViewModel() {
         _redoStack.clear()
         currentStrokePoints = emptyList()
         updateUndoRedo()
+        scheduleAutoSave()
     }
 
     fun onDrawCancel() {
@@ -124,6 +144,7 @@ class DrawingViewModel : ViewModel() {
             _redoStack.clear()
             updateUndoRedo()
         }
+        scheduleAutoSave()
     }
 
     fun onPanDelta(delta: Offset) {
@@ -135,6 +156,7 @@ class DrawingViewModel : ViewModel() {
         val last = _actions.removeLast()
         _redoStack.add(last)
         updateUndoRedo()
+        scheduleAutoSave()
     }
 
     fun redo() {
@@ -142,6 +164,30 @@ class DrawingViewModel : ViewModel() {
         val action = _redoStack.removeLast()
         _actions.add(action)
         updateUndoRedo()
+        scheduleAutoSave()
+    }
+
+    /**
+     * Persist the current drawing. Called automatically after every committed
+     * change (strokes, stamps, undo, redo) and on lifecycle pause (for pan
+     * offset, which doesn't commit a new action).
+     */
+    fun saveNow() {
+        // Cancel any pending async save; do this one on IO immediately so that
+        // it completes before the app is killed.
+        saveJob?.cancel()
+        val snapshot = DrawingSnapshot(_actions.toList(), panOffset)
+        saveJob = viewModelScope.launch(Dispatchers.IO) {
+            storage.save(snapshot)
+        }
+    }
+
+    private fun scheduleAutoSave() {
+        saveJob?.cancel()
+        val snapshot = DrawingSnapshot(_actions.toList(), panOffset)
+        saveJob = viewModelScope.launch(Dispatchers.IO) {
+            storage.save(snapshot)
+        }
     }
 
     private fun updateUndoRedo() {

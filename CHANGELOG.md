@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.0.0] - 2026-04-16
+
+### Added
+- **Keep screen on** while the app is open, so a toddler's drawing session is never interrupted by the screen locking mid-stroke.
+- **Sticky immersive fullscreen** hides the status and navigation bars so toddlers can't accidentally pull notifications or navigate away. Bars transiently reappear on an edge swipe for parents who need them.
+- **Auto-save and restore** — the drawing (and the current pan position) is silently saved to disk after every stroke, stamp, undo, and redo, and reloaded on the next launch. No save button, no dialog, no lost masterpieces when the app is closed or killed.
+- **Haptic feedback** on every tool, color, stamp, and undo/redo tap, plus a soft tick on each stamp placement. Tactile confirmation that toddlers love.
+
+### Changed
+- **Smoother strokes** — stroke rendering now uses quadratic Bézier curves between sample midpoints instead of straight line segments, eliminating polyline jaggies on fast strokes.
+- The back gesture is now **fully swallowed** so a toddler cannot accidentally exit the app mid-drawing.
+
 ## [2.1.3] - 2026-04-16
 
 ### Fixed

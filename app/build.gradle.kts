@@ -21,8 +21,8 @@ android {
         applicationId = "yuku.gambaraja.kokrepot"
         minSdk = 29
         targetSdk = 35
-        versionCode = 8
-        versionName = "2.1.3"
+        versionCode = 9
+        versionName = "3.0.0"
     }
 
     signingConfigs {

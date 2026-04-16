@@ -28,6 +28,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import yuku.gambaraja.kokrepot.model.StampType
 import yuku.gambaraja.kokrepot.model.Tool
@@ -65,6 +67,7 @@ fun RightToolbar(
     val dividerColor = Color.Black.copy(alpha = 0.15f)
 
     val scrollState = rememberScrollState()
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = modifier
@@ -118,7 +121,13 @@ fun RightToolbar(
         Spacer(modifier = Modifier.height(4.dp))
 
         // Undo — always black when enabled.
-        IconButton(onClick = onUndo, enabled = canUndo) {
+        IconButton(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onUndo()
+            },
+            enabled = canUndo,
+        ) {
             Icon(
                 Icons.AutoMirrored.Filled.Undo,
                 contentDescription = "Undo",
@@ -126,7 +135,13 @@ fun RightToolbar(
             )
         }
         // Redo — if disabled, hide the icon entirely (keep the slot so layout is stable).
-        IconButton(onClick = onRedo, enabled = canRedo) {
+        IconButton(
+            onClick = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onRedo()
+            },
+            enabled = canRedo,
+        ) {
             if (canRedo) {
                 Icon(
                     Icons.AutoMirrored.Filled.Redo,
