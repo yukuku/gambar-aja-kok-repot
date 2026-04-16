@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.1.3] - 2026-04-16
+
+### Fixed
+- Smiley stamp eyes and mouth now have a border halo matching the face outline, so the face stays visible when using dark colors (e.g. purple) on the toolbar's dark selection background
+
 ## [2.1.2] - 2026-04-13
 
 ### Changed

@@ -113,12 +113,42 @@ private fun DrawScope.drawSpiral(center: Offset, color: Color, size: Float, bord
 
 private fun DrawScope.drawSmiley(center: Offset, color: Color, size: Float, borderColor: Color?) {
     val strokeWidth = size * 0.1f
+    val leftEyeCenter = Offset(center.x - size * 0.35f, center.y - size * 0.25f)
+    val rightEyeCenter = Offset(center.x + size * 0.35f, center.y - size * 0.25f)
+    val eyeRadius = size * 0.12f
+    val mouthPath = Path().apply {
+        val mouthRect = Rect(
+            left = center.x - size * 0.5f,
+            top = center.y - size * 0.1f,
+            right = center.x + size * 0.5f,
+            bottom = center.y + size * 0.6f
+        )
+        arcTo(mouthRect, 0f, 180f, false)
+    }
+
     if (borderColor != null) {
-        // Halo the face outline with a slightly larger border stroke behind it.
+        // Halo every face element with the border color, not just the face outline,
+        // so the eyes and mouth also stay visible when [color] is close to the
+        // surrounding background (e.g. purple on the dark-grey selection indicator).
         drawCircle(
             color = borderColor,
             radius = size,
             center = center,
+            style = Stroke(width = strokeWidth * 2.2f)
+        )
+        drawCircle(
+            color = borderColor,
+            radius = eyeRadius + strokeWidth * 0.6f,
+            center = leftEyeCenter
+        )
+        drawCircle(
+            color = borderColor,
+            radius = eyeRadius + strokeWidth * 0.6f,
+            center = rightEyeCenter
+        )
+        drawPath(
+            path = mouthPath,
+            color = borderColor,
             style = Stroke(width = strokeWidth * 2.2f)
         )
     }
@@ -132,25 +162,16 @@ private fun DrawScope.drawSmiley(center: Offset, color: Color, size: Float, bord
     // Left eye
     drawCircle(
         color = color,
-        radius = size * 0.12f,
-        center = Offset(center.x - size * 0.35f, center.y - size * 0.25f)
+        radius = eyeRadius,
+        center = leftEyeCenter
     )
     // Right eye
     drawCircle(
         color = color,
-        radius = size * 0.12f,
-        center = Offset(center.x + size * 0.35f, center.y - size * 0.25f)
+        radius = eyeRadius,
+        center = rightEyeCenter
     )
     // Mouth arc
-    val mouthPath = Path().apply {
-        val mouthRect = Rect(
-            left = center.x - size * 0.5f,
-            top = center.y - size * 0.1f,
-            right = center.x + size * 0.5f,
-            bottom = center.y + size * 0.6f
-        )
-        arcTo(mouthRect, 0f, 180f, false)
-    }
     drawPath(
         path = mouthPath,
         color = color,
