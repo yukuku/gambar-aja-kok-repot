@@ -15,12 +15,43 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import yuku.gambaraja.kokrepot.model.DrawingAction
 import yuku.gambaraja.kokrepot.stamp.drawStamp
+
+/**
+ * Build a smoothed path through [points] using quadratic Bézier curves between
+ * midpoints of adjacent samples. Each raw sample becomes a control point, and
+ * the curve passes through the midpoints between consecutive samples. This
+ * rounds off the polyline jaggies you get from `lineTo` alone, especially on
+ * fast strokes where the sample spacing is wide.
+ */
+private fun smoothedStrokePath(points: List<Offset>): Path {
+    val path = Path()
+    if (points.isEmpty()) return path
+    path.moveTo(points[0].x, points[0].y)
+    if (points.size == 2) {
+        path.lineTo(points[1].x, points[1].y)
+        return path
+    }
+    // For each interior point, draw a quadratic curve using the point itself as
+    // the control and the midpoint to the next point as the endpoint.
+    for (i in 1 until points.size - 1) {
+        val midX = (points[i].x + points[i + 1].x) / 2f
+        val midY = (points[i].y + points[i + 1].y) / 2f
+        path.quadraticTo(points[i].x, points[i].y, midX, midY)
+    }
+    // Finish with a line to the final point so the stroke actually ends
+    // where the user's finger released.
+    val last = points[points.size - 1]
+    path.lineTo(last.x, last.y)
+    return path
+}
 
 @Composable
 fun DrawingCanvas(
@@ -47,6 +78,8 @@ fun DrawingCanvas(
         stampSize * 2 + with(density) { 10.dp.toPx() }
     }
     val currentStampMinDistance by rememberUpdatedState(stampMinDistance)
+    val haptic = LocalHapticFeedback.current
+    val currentHaptic by rememberUpdatedState(haptic)
 
     Canvas(
         modifier = modifier
@@ -72,6 +105,8 @@ fun DrawingCanvas(
                         if (maxPointerCount < 3) {
                             if (currentIsStampTool) {
                                 onTap(startWorldPos)
+                                // Tactile "thunk" when a stamp lands — toddlers love it.
+                                currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 lastStampPos = startWorldPos
                             } else {
                                 onDrawStart(startWorldPos)
@@ -144,6 +179,10 @@ fun DrawingCanvas(
                                             val distance = (worldPos - last).getDistance()
                                             if (distance >= currentStampMinDistance) {
                                                 onTap(worldPos)
+                                                // Soft tick for each sprinkled stamp during drag.
+                                                currentHaptic.performHapticFeedback(
+                                                    HapticFeedbackType.TextHandleMove
+                                                )
                                                 lastStampPos = worldPos
                                             }
                                         }
@@ -185,14 +224,8 @@ fun DrawingCanvas(
                 when (action) {
                     is DrawingAction.Stroke -> {
                         if (action.points.size >= 2) {
-                            val path = Path().apply {
-                                moveTo(action.points[0].x, action.points[0].y)
-                                for (i in 1 until action.points.size) {
-                                    lineTo(action.points[i].x, action.points[i].y)
-                                }
-                            }
                             drawPath(
-                                path = path,
+                                path = smoothedStrokePath(action.points),
                                 color = if (action.isEraser) Color.White else Color(action.color),
                                 style = Stroke(
                                     width = action.thickness,
@@ -222,14 +255,8 @@ fun DrawingCanvas(
 
             // Draw in-progress stroke overlay
             if (currentStrokePoints.size >= 2) {
-                val path = Path().apply {
-                    moveTo(currentStrokePoints[0].x, currentStrokePoints[0].y)
-                    for (i in 1 until currentStrokePoints.size) {
-                        lineTo(currentStrokePoints[i].x, currentStrokePoints[i].y)
-                    }
-                }
                 drawPath(
-                    path = path,
+                    path = smoothedStrokePath(currentStrokePoints),
                     color = if (isEraser) Color.White else currentColor,
                     style = Stroke(
                         width = currentThickness,

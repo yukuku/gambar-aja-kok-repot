@@ -18,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -56,6 +58,7 @@ fun AnimatedToolButton(
 ) {
     val blinkAlpha = remember { Animatable(if (isSelected) 1f else 0f) }
     var firstPass by remember { mutableStateOf(true) }
+    val haptic = LocalHapticFeedback.current
 
     LaunchedEffect(isSelected) {
         if (firstPass) {
@@ -82,7 +85,11 @@ fun AnimatedToolButton(
             .size(size)
             .clip(shape)
             .background(indicator, shape)
-            .clickable { onClick() },
+            .clickable {
+                // Toddler-friendly tactile feedback on every tool/color tap.
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                onClick()
+            },
         contentAlignment = Alignment.Center
     ) {
         content()
