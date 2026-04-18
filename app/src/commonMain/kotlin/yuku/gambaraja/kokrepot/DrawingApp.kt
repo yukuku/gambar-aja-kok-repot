@@ -115,7 +115,7 @@ private fun CogOverlay(onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .systemBarsPadding()
-            .padding(top = 8.dp)
+            .padding(top = 56.dp)
             .size(40.dp)
             .clip(CircleShape)
             .background(Color.Black.copy(alpha = 0.55f))
