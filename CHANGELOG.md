@@ -1,5 +1,18 @@
 # Changelog
 
+## [4.0.0] - 2026-04-18
+
+### Added
+- **Web version** built with Kotlin Multiplatform + Compose Multiplatform 1.8.2, targeting Kotlin/Wasm. The Android app and the web app share the same drawing canvas, toolbars, stamps, and view-model — only storage and the host entry point are platform-specific.
+- **GitHub Pages deployment** (`.github/workflows/pages.yml`) publishes the Wasm build on every push to `main`, live at <https://yukuku.github.io/gambar-aja-kok-repot/>.
+- **Hidden settings dialog** with the version, git hash, and build timestamp (rendered in the viewer's local time with UTC offset). Opened via a two-finger combo — press the grey color and the smiley stamp simultaneously, then tap the cog that briefly appears at the top of the screen. Designed so random toddler button-mashing can't trigger it.
+- **Browser fullscreen** on the web version now engages on the first user interaction (matching the Android app's immersive mode), with retry across multiple fullscreen targets for Chrome Android / Opera Mobile compatibility.
+
+### Changed
+- `:app` was converted from an Android-only module to a Kotlin Multiplatform module with `androidTarget` and `wasmJs` targets. The APK output path (`app/build/outputs/apk/release/app-release.apk`) is unchanged.
+- `DrawingViewModel` is now a plain multiplatform class (no `AndroidViewModel`) that owns a `CoroutineScope` directly.
+- On web, the drawing is persisted in `localStorage` as a compact text format. On Android, the existing binary file format is preserved so existing users keep their drawings.
+
 ## [3.0.0] - 2026-04-16
 
 ### Added

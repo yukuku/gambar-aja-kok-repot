@@ -2,7 +2,6 @@ package yuku.gambaraja.kokrepot.ui.toolbar
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,11 +30,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.border
 import yuku.gambaraja.kokrepot.model.StampType
 import yuku.gambaraja.kokrepot.model.Tool
 import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
+
+/** The stamp whose button press is part of the hidden settings gesture. */
+val SecretGestureStamp: StampType = StampType.SMILEY
 
 private val stampTools = listOf(
     Tool.STAMP_HEART to StampType.HEART,
@@ -57,11 +60,10 @@ fun RightToolbar(
     onToolSelected: (Tool) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSecretStampPressedChange: ((Boolean) -> Unit)? = null,
 ) {
     val isStampMode = selectedTool.isStamp
-    // When the eraser is active, thickness/stamp icons render white so they
-    // read as "the eraser paints white".
     val iconColor = if (isEraserSelected) Color.White else selectedColor
     val iconBorderColor = borderForToolColor(iconColor)
     val dividerColor = Color.Black.copy(alpha = 0.15f)
@@ -80,7 +82,6 @@ fun RightToolbar(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        // Thickness buttons — unselected when a stamp tool is active.
         thicknesses.forEach { thickness ->
             val isSelected = thickness == selectedThickness && !isStampMode
             AnimatedToolButton(
@@ -98,8 +99,6 @@ fun RightToolbar(
             }
         }
 
-        // Stamps are meaningless while the eraser is active (you can't stamp
-        // with an eraser), so hide the whole stamp section in that case.
         if (!isEraserSelected) {
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider(
@@ -109,7 +108,8 @@ fun RightToolbar(
             Spacer(modifier = Modifier.height(4.dp))
 
             stampTools.forEach { (tool, stampType) ->
-                StampToolButton(tool, stampType, selectedTool, iconColor, iconBorderColor, onToolSelected)
+                val pressCallback = if (stampType == SecretGestureStamp) onSecretStampPressedChange else null
+                StampToolButton(tool, stampType, selectedTool, iconColor, iconBorderColor, onToolSelected, pressCallback)
             }
         }
 
@@ -120,7 +120,6 @@ fun RightToolbar(
         )
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Undo — always black when enabled.
         IconButton(
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -134,7 +133,6 @@ fun RightToolbar(
                 tint = if (canUndo) Color.Black else Color.Black.copy(alpha = 0.3f)
             )
         }
-        // Redo — if disabled, hide the icon entirely (keep the slot so layout is stable).
         IconButton(
             onClick = {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -161,14 +159,13 @@ private fun StampToolButton(
     iconColor: Color,
     borderColor: Color,
     onToolSelected: (Tool) -> Unit,
+    onPressedChange: ((Boolean) -> Unit)? = null,
 ) {
     AnimatedToolButton(
         isSelected = selectedTool == tool,
-        onClick = { onToolSelected(tool) }
+        onClick = { onToolSelected(tool) },
+        onPressedChange = onPressedChange,
     ) {
-        // Draw the stamp directly — the outline follows the stamp's own shape
-        // (heart silhouette, star points, square edges, etc.) rather than a
-        // square bounding box.
         Canvas(modifier = Modifier.size(26.dp)) {
             drawStamp(
                 center = Offset(size.width / 2, size.height / 2),

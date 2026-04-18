@@ -51,6 +51,17 @@ Grab the latest APK from [**Releases**](../../releases) and install it on any An
 
 That's it. No Play Store listing with a 47-page privacy policy. Just download, install, draw.
 
+## 🌐 Try it in your browser
+
+The app also runs in the browser via Kotlin/Wasm + Compose Multiplatform. The web version is deployed to GitHub Pages on every push to `main` — see the repository's Pages URL.
+
+To build locally:
+
+```bash
+./gradlew wasmJsBrowserDistribution
+# then serve app/build/dist/wasmJs/productionExecutable/ with any static file server
+```
+
 ---
 
 ## The Philosophy

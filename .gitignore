@@ -9,3 +9,7 @@
 .cxx
 .DS_Store
 Thumbs.db
+# Kotlin/JS + Wasm intermediates. `kotlin-js-store/yarn.lock` is intentionally
+# committed (it locks the web dependency graph) but `node_modules` is not.
+/node_modules
+**/node_modules

@@ -1,18 +1,21 @@
 # Gambar Aja Kok Repot
 
-A toddler-friendly drawing app for Android, built with Jetpack Compose.
+A toddler-friendly drawing app, built with Kotlin Multiplatform + Compose Multiplatform. Runs natively on Android and in the browser (Kotlin/Wasm).
 
 ## Build
 
 ```bash
-# Debug build
+# Android debug build
 ./gradlew assembleDebug
 
-# Release build (signed APK)
+# Android release build (signed APK)
 ./gradlew assembleRelease
+
+# Web (Wasm) production distribution
+./gradlew wasmJsBrowserDistribution
 ```
 
-The release APK is output to `app/build/outputs/apk/release/app-release.apk`.
+The release APK is output to `app/build/outputs/apk/release/app-release.apk`. The web distribution is output to `app/build/dist/wasmJs/productionExecutable/` (open `index.html` via a local web server — not `file://`, which blocks Wasm).
 
 ### Android SDK setup (for environments without it)
 
@@ -69,20 +72,32 @@ export ANDROID_SDK_ROOT=/home/user/android-sdk
 
 ## Project Structure
 
+The `:app` module is a Kotlin Multiplatform project with `androidTarget` (APK) and `wasmJs` (browser) targets.
+
 ```
-app/src/main/java/yuku/gambaraja/kokrepot/
-├── MainActivity.kt              # Single activity, edge-to-edge
-├── DrawingApp.kt                # Root composable: LeftToolbar | Canvas | RightToolbar
-├── DrawingViewModel.kt          # State: actions list, undo/redo, tool/color/thickness, pan offset
-├── model/
-│   ├── DrawingAction.kt         # Sealed class: Stroke (points+color+thickness) and Stamp (center+type+color+size)
-│   └── Enums.kt                 # Tool enum (BRUSH, ERASER, STAMP_*), StampType enum
-├── ui/
-│   ├── canvas/DrawingCanvas.kt  # Compose Canvas: renders actions with viewport culling, touch handling
-│   └── toolbar/
-│       ├── LeftToolbar.kt       # 12 color circles + eraser button
-│       └── RightToolbar.kt      # 5 thickness buttons + 5 stamp buttons + undo/redo
-└── stamp/StampRenderer.kt       # DrawScope extensions: drawHeart, drawStar, drawSpiral, drawSmiley, drawSquare
+app/src/
+├── commonMain/kotlin/yuku/gambaraja/kokrepot/
+│   ├── DrawingApp.kt            # Root composable: LeftToolbar | Canvas | RightToolbar
+│   ├── DrawingViewModel.kt      # State: actions list, undo/redo, tool/color/thickness, pan offset
+│   ├── DrawingStorage.kt        # `expect class DrawingStorage` (load/save DrawingSnapshot)
+│   ├── model/
+│   │   ├── DrawingAction.kt     # Sealed class: Stroke (points+color+thickness) and Stamp (center+type+color+size)
+│   │   └── Enums.kt             # Tool enum (BRUSH, ERASER, STAMP_*), StampType enum
+│   ├── ui/
+│   │   ├── canvas/DrawingCanvas.kt    # Compose Canvas: viewport culling, touch handling (1-finger draw, 3-finger pan)
+│   │   └── toolbar/{LeftToolbar,RightToolbar,ToolbarCommon}.kt
+│   └── stamp/StampRenderer.kt   # DrawScope extensions: drawHeart, drawStar, drawSpiral, drawSmiley, drawSquare
+├── androidMain/
+│   ├── AndroidManifest.xml
+│   ├── res/                     # Android launcher icons, themes, backup rules
+│   └── kotlin/yuku/gambaraja/kokrepot/
+│       ├── MainActivity.kt              # Single activity, edge-to-edge, immersive mode
+│       └── DrawingStorage.android.kt    # `actual` — binary file in app's internal filesDir
+└── wasmJsMain/
+    ├── kotlin/
+    │   ├── Main.kt                      # `fun main()` — ComposeViewport(document.body)
+    │   └── yuku/gambaraja/kokrepot/DrawingStorage.wasmJs.kt    # `actual` — text format in localStorage
+    └── resources/index.html             # Web entry page
 ```
 
 ## Architecture
@@ -122,6 +137,10 @@ app/src/main/java/yuku/gambaraja/kokrepot/
 
 ### Right toolbar
 5 brush thicknesses (4, 8, 14, 22, 32). Then 5 stamp types: Heart, Star, Spiral, Smiley, Square. Then Undo and Redo at the bottom. Stamp size = thickness * 2.5.
+
+## Web deployment
+
+The web (Wasm) build is automatically deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` (and to `claude/add-web-kmp-*` branches for preview builds). The live URL is configured in the repository's Pages settings.
 
 ## Signing
 

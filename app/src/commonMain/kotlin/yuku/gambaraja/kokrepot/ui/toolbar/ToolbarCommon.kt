@@ -3,8 +3,9 @@ package yuku.gambaraja.kokrepot.ui.toolbar
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,19 +42,13 @@ fun borderForToolColor(toolColor: Color): Color {
     return if (luminance > 0.5f) BorderForLightTool else BorderForDarkTool
 }
 
-/**
- * A selectable toolbar button with a dark-grey blinking selection indicator.
- *
- * The indicator is static (solid) once a tool is the selected one, and blinks briefly
- * when the user changes selection to this tool. It intentionally does **not** blink on
- * first composition — so the initial default tool does not animate at startup.
- */
 @Composable
 fun AnimatedToolButton(
     isSelected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 40.dp,
+    onPressedChange: ((Boolean) -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val blinkAlpha = remember { Animatable(if (isSelected) 1f else 0f) }
@@ -77,6 +72,15 @@ fun AnimatedToolButton(
         }
     }
 
+    // A shared interaction source lets callers that care about press state
+    // observe it without interfering with `clickable`. Used for the secret
+    // two-finger combo that reveals the settings cog.
+    val interactionSource = remember { MutableInteractionSource() }
+    if (onPressedChange != null) {
+        val isPressed by interactionSource.collectIsPressedAsState()
+        LaunchedEffect(isPressed) { onPressedChange(isPressed) }
+    }
+
     val shape = RoundedCornerShape(8.dp)
     val indicator = SelectionIndicatorColor.copy(alpha = blinkAlpha.value)
 
@@ -85,8 +89,10 @@ fun AnimatedToolButton(
             .size(size)
             .clip(shape)
             .background(indicator, shape)
-            .clickable {
-                // Toddler-friendly tactile feedback on every tool/color tap.
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+            ) {
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             },

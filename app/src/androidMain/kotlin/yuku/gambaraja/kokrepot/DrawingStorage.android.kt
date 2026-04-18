@@ -10,58 +10,36 @@ import java.io.DataOutputStream
 import java.io.File
 
 /**
- * Persisted drawing snapshot: the committed actions and the current pan offset.
- */
-data class DrawingSnapshot(
-    val actions: List<DrawingAction>,
-    val panOffset: Offset,
-)
-
-/**
- * Binary persistence of the drawing so a toddler's masterpiece survives the app
- * being closed, backgrounded, or killed. No dialogs, no save button — the drawing
- * is always implicitly saved and always restored on launch.
- *
- * File format (little-endian via DataOutputStream — big-endian actually, but it
- * doesn't matter as long as reader/writer match):
+ * Binary on-disk persistence using the app's internal files directory. Format
+ * is unchanged from previous versions, so existing users keep their drawings.
  *
  *   magic:    4 bytes "GAKR"
  *   version:  int
- *   panX:     float
- *   panY:     float
- *   count:    int   (number of actions)
+ *   panX, panY: float
+ *   count:    int
  *   actions:  repeated
  *     type: byte (0 = stroke, 1 = stamp)
- *     stroke:
- *       color: int
- *       thickness: float
- *       isEraser: byte (0/1)
- *       pointCount: int
- *       points: pointCount * (float x, float y)
- *     stamp:
- *       cx: float, cy: float
- *       stampType: byte (ordinal)
- *       color: int
- *       size: float
+ *     stroke: color:int, thickness:float, isEraser:byte, pointCount:int, points:(float x, float y)*
+ *     stamp: cx:float, cy:float, stampType:byte, color:int, size:float
  */
-class DrawingStorage(private val context: Context) {
+actual class DrawingStorage(private val context: Context) {
 
-    companion object {
-        private const val TAG = "DrawingStorage"
-        private const val FILE_NAME = "drawing.bin"
-        private const val MAGIC_0 = 'G'.code.toByte()
-        private const val MAGIC_1 = 'A'.code.toByte()
-        private const val MAGIC_2 = 'K'.code.toByte()
-        private const val MAGIC_3 = 'R'.code.toByte()
-        private const val FORMAT_VERSION = 1
-        private const val TYPE_STROKE: Byte = 0
-        private const val TYPE_STAMP: Byte = 1
+    private companion object {
+        const val TAG = "DrawingStorage"
+        const val FILE_NAME = "drawing.bin"
+        const val MAGIC_0 = 'G'.code.toByte()
+        const val MAGIC_1 = 'A'.code.toByte()
+        const val MAGIC_2 = 'K'.code.toByte()
+        const val MAGIC_3 = 'R'.code.toByte()
+        const val FORMAT_VERSION = 1
+        const val TYPE_STROKE: Byte = 0
+        const val TYPE_STAMP: Byte = 1
     }
 
     private val file: File get() = File(context.filesDir, FILE_NAME)
     private val tempFile: File get() = File(context.filesDir, "$FILE_NAME.tmp")
 
-    fun load(): DrawingSnapshot? {
+    actual fun load(): DrawingSnapshot? {
         val f = file
         if (!f.exists()) return null
         return try {
@@ -87,7 +65,7 @@ class DrawingStorage(private val context: Context) {
                     return@use null
                 }
                 val actions = ArrayList<DrawingAction>(count)
-                val stampTypes = StampType.values()
+                val stampTypes = StampType.entries
                 for (i in 0 until count) {
                     when (val type = input.readByte()) {
                         TYPE_STROKE -> {
@@ -147,7 +125,7 @@ class DrawingStorage(private val context: Context) {
         }
     }
 
-    fun save(snapshot: DrawingSnapshot) {
+    actual fun save(snapshot: DrawingSnapshot) {
         val tmp = tempFile
         try {
             DataOutputStream(tmp.outputStream().buffered()).use { out ->
@@ -184,9 +162,7 @@ class DrawingStorage(private val context: Context) {
                 }
                 out.flush()
             }
-            // Atomic-ish rename so a crash mid-write leaves the old file intact.
             if (!tmp.renameTo(file)) {
-                // Fall back to copy-then-delete if rename fails across filesystems.
                 tmp.copyTo(file, overwrite = true)
                 tmp.delete()
             }

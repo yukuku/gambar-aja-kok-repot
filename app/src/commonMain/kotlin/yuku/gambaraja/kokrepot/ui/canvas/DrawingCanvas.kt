@@ -26,10 +26,7 @@ import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 /**
  * Build a smoothed path through [points] using quadratic Bézier curves between
- * midpoints of adjacent samples. Each raw sample becomes a control point, and
- * the curve passes through the midpoints between consecutive samples. This
- * rounds off the polyline jaggies you get from `lineTo` alone, especially on
- * fast strokes where the sample spacing is wide.
+ * midpoints of adjacent samples.
  */
 private fun smoothedStrokePath(points: List<Offset>): Path {
     val path = Path()
@@ -39,15 +36,11 @@ private fun smoothedStrokePath(points: List<Offset>): Path {
         path.lineTo(points[1].x, points[1].y)
         return path
     }
-    // For each interior point, draw a quadratic curve using the point itself as
-    // the control and the midpoint to the next point as the endpoint.
     for (i in 1 until points.size - 1) {
         val midX = (points[i].x + points[i + 1].x) / 2f
         val midY = (points[i].y + points[i + 1].y) / 2f
         path.quadraticTo(points[i].x, points[i].y, midX, midY)
     }
-    // Finish with a line to the final point so the stroke actually ends
-    // where the user's finger released.
     val last = points[points.size - 1]
     path.lineTo(last.x, last.y)
     return path
@@ -105,7 +98,6 @@ fun DrawingCanvas(
                         if (maxPointerCount < 3) {
                             if (currentIsStampTool) {
                                 onTap(startWorldPos)
-                                // Tactile "thunk" when a stamp lands — toddlers love it.
                                 currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 lastStampPos = startWorldPos
                             } else {
@@ -179,7 +171,6 @@ fun DrawingCanvas(
                                             val distance = (worldPos - last).getDistance()
                                             if (distance >= currentStampMinDistance) {
                                                 onTap(worldPos)
-                                                // Soft tick for each sprinkled stamp during drag.
                                                 currentHaptic.performHapticFeedback(
                                                     HapticFeedbackType.TextHandleMove
                                                 )
@@ -205,10 +196,8 @@ fun DrawingCanvas(
         val canvasWidth = size.width
         val canvasHeight = size.height
 
-        // White background
         drawRect(Color.White)
 
-        // Viewport rect in world coordinates for culling
         val viewportRect = Rect(
             left = -panOffset.x,
             top = -panOffset.y,
@@ -217,7 +206,6 @@ fun DrawingCanvas(
         )
 
         translate(left = panOffset.x, top = panOffset.y) {
-            // Draw committed actions (only those in viewport)
             for (action in actions) {
                 if (!action.bounds.overlaps(viewportRect)) continue
 
@@ -234,7 +222,6 @@ fun DrawingCanvas(
                                 )
                             )
                         } else if (action.points.size == 1) {
-                            // Single dot
                             drawCircle(
                                 color = if (action.isEraser) Color.White else Color(action.color),
                                 radius = action.thickness / 2f,
@@ -253,7 +240,6 @@ fun DrawingCanvas(
                 }
             }
 
-            // Draw in-progress stroke overlay
             if (currentStrokePoints.size >= 2) {
                 drawPath(
                     path = smoothedStrokePath(currentStrokePoints),
