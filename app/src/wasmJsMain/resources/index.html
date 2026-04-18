@@ -45,6 +45,26 @@
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Browsers forbid auto-entering fullscreen on load — it must originate from a
+  // user gesture. So we attach a one-shot listener that fires on the first
+  // pointer/key event anywhere on the page and requests fullscreen then. This
+  // matches the Android app's immersive mode: as soon as the toddler touches
+  // the screen, system chrome disappears.
+  function enterFullscreenOnce() {
+    const el = document.documentElement;
+    const req = el.requestFullscreen
+             || el.webkitRequestFullscreen
+             || el.mozRequestFullScreen
+             || el.msRequestFullscreen;
+    if (req) {
+      try { req.call(el); } catch (_) { /* user may have denied; ignore */ }
+    }
+    window.removeEventListener('pointerdown', enterFullscreenOnce, true);
+    window.removeEventListener('keydown', enterFullscreenOnce, true);
+  }
+  window.addEventListener('pointerdown', enterFullscreenOnce, true);
+  window.addEventListener('keydown', enterFullscreenOnce, true);
 </script>
 <script type="application/javascript" src="gambar-aja-kok-repot.js"></script>
 </body>
