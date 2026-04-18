@@ -6,14 +6,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.viewmodel.compose.viewModel
 import yuku.gambaraja.kokrepot.model.Tool
 import yuku.gambaraja.kokrepot.ui.canvas.DrawingCanvas
 import yuku.gambaraja.kokrepot.ui.toolbar.LeftToolbar
 import yuku.gambaraja.kokrepot.ui.toolbar.RightToolbar
 
 @Composable
-fun DrawingApp(viewModel: DrawingViewModel = viewModel()) {
+fun DrawingApp(viewModel: DrawingViewModel) {
     Box(modifier = Modifier.fillMaxSize()) {
         DrawingCanvas(
             actions = viewModel.actions,

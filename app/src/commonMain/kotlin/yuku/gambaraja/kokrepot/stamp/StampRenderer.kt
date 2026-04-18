@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import yuku.gambaraja.kokrepot.model.StampType
+import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -33,10 +34,6 @@ fun DrawScope.drawStamp(
 }
 
 private fun heartPath(center: Offset, size: Float): Path {
-    // A fuller, plumper heart. The bottom tip sits s * 0.75 below the center,
-    // the lobe tops s * 0.8 above it, and the valley between the lobes is at
-    // s * 0.25 above center. Control points are pulled out to s * 0.95
-    // horizontally so the lobes puff out roundly.
     val cx = center.x
     val cy = center.y
     val s = size
@@ -47,9 +44,7 @@ private fun heartPath(center: Offset, size: Float): Path {
     val controlLowY = cy + s * 0.15f
     return Path().apply {
         moveTo(cx, tipY)
-        // Left lobe: from bottom tip, swing out left and up, then dip to the valley.
         cubicTo(cx - lobeX, controlLowY, cx - lobeX, lobeTopY, cx, valleyY)
-        // Right lobe: valley up and right, then back down to the tip.
         cubicTo(cx + lobeX, lobeTopY, cx + lobeX, controlLowY, cx, tipY)
         close()
     }
@@ -69,7 +64,7 @@ private fun starPath(center: Offset, size: Float): Path {
     val innerRadius = size * 0.4f
     for (i in 0 until 10) {
         val radius = if (i % 2 == 0) outerRadius else innerRadius
-        val angle = Math.toRadians((i * 36.0 - 90.0))
+        val angle = (i * 36.0 - 90.0) * PI / 180.0
         val x = center.x + radius * cos(angle).toFloat()
         val y = center.y + radius * sin(angle).toFloat()
         if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
@@ -92,7 +87,7 @@ private fun spiralPath(center: Offset, size: Float): Path {
     val points = 100
     for (i in 0..points) {
         val t = i.toFloat() / points
-        val angle = turns * 2 * Math.PI * t
+        val angle = turns * 2 * PI * t
         val radius = size * t
         val x = center.x + radius * cos(angle).toFloat()
         val y = center.y + radius * sin(angle).toFloat()
@@ -104,8 +99,6 @@ private fun spiralPath(center: Offset, size: Float): Path {
 private fun DrawScope.drawSpiral(center: Offset, color: Color, size: Float, borderColor: Color?) {
     val path = spiralPath(center, size)
     if (borderColor != null) {
-        // Slightly wider stroke of the border under the spiral, so the spiral's
-        // own curve is visibly haloed on low-contrast color choices.
         drawPath(path, borderColor, style = Stroke(width = size * 0.22f))
     }
     drawPath(path, color, style = Stroke(width = size * 0.12f))
@@ -127,9 +120,6 @@ private fun DrawScope.drawSmiley(center: Offset, color: Color, size: Float, bord
     }
 
     if (borderColor != null) {
-        // Halo every face element with the border color, not just the face outline,
-        // so the eyes and mouth also stay visible when [color] is close to the
-        // surrounding background (e.g. purple on the dark-grey selection indicator).
         drawCircle(
             color = borderColor,
             radius = size,
@@ -152,26 +142,22 @@ private fun DrawScope.drawSmiley(center: Offset, color: Color, size: Float, bord
             style = Stroke(width = strokeWidth * 2.2f)
         )
     }
-    // Face outline
     drawCircle(
         color = color,
         radius = size,
         center = center,
         style = Stroke(width = strokeWidth)
     )
-    // Left eye
     drawCircle(
         color = color,
         radius = eyeRadius,
         center = leftEyeCenter
     )
-    // Right eye
     drawCircle(
         color = color,
         radius = eyeRadius,
         center = rightEyeCenter
     )
-    // Mouth arc
     drawPath(
         path = mouthPath,
         color = color,

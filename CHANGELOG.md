@@ -1,5 +1,16 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- **Web version** built with Kotlin Multiplatform + Compose Multiplatform 1.8.2, targeting Kotlin/Wasm. The Android app and the web app share the same drawing canvas, toolbars, stamps, and ViewModel — only storage and the host entry point are platform-specific.
+- GitHub Pages deployment (`.github/workflows/pages.yml`) publishes the Wasm build on every push to `main`.
+
+### Changed
+- `:app` was converted from an Android-only module to a Kotlin Multiplatform module with `androidTarget` and `wasmJs` targets. The APK output path (`app/build/outputs/apk/release/app-release.apk`) is unchanged.
+- `DrawingViewModel` is now a plain multiplatform class (no `AndroidViewModel`) that owns a `CoroutineScope` directly.
+- On web, the drawing is persisted in `localStorage` as a compact text format. On Android, the existing binary file format is preserved so existing users keep their drawings.
+
 ## [3.0.0] - 2026-04-16
 
 ### Added

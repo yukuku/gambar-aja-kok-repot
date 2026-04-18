@@ -1,6 +1,5 @@
 package yuku.gambaraja.kokrepot
 
-import android.app.Application
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -8,19 +7,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import yuku.gambaraja.kokrepot.model.DrawingAction
 import yuku.gambaraja.kokrepot.model.Tool
 
-class DrawingViewModel(application: Application) : AndroidViewModel(application) {
+/**
+ * Holds the canvas state and dispatches mutations. Not an Android ViewModel —
+ * multiplatform. Callers create an instance once (e.g., in a `remember` block on
+ * web, or in an Activity scope on Android) and dispose it when done.
+ */
+class DrawingViewModel(private val storage: DrawingStorage) {
 
     companion object {
         const val STAMP_FIXED_SIZE = 50f
     }
+
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     var selectedColor by mutableStateOf(Color.Black)
         private set
@@ -48,12 +54,9 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
 
     private val _redoStack = mutableListOf<DrawingAction>()
 
-    private val storage = DrawingStorage(application)
     private var saveJob: Job? = null
 
     init {
-        // Restore the last saved drawing so the toddler's art survives the app
-        // being closed or killed. No "load" UI — it's always on.
         val snapshot = storage.load()
         if (snapshot != null) {
             _actions.addAll(snapshot.actions)
@@ -77,7 +80,6 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     }
 
     fun selectTool(tool: Tool) {
-        // If tapping the same stamp tool, toggle back to brush
         if (tool == selectedTool && tool.isStamp) {
             selectedTool = Tool.BRUSH
         } else {
@@ -131,7 +133,6 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
             _redoStack.clear()
             updateUndoRedo()
         } else {
-            // Place a dot
             val isEraser = selectedTool == Tool.ERASER
             val color = if (isEraser) Color.White.toArgb() else selectedColor.toArgb()
             val dot = DrawingAction.Stroke(
@@ -167,17 +168,10 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
         scheduleAutoSave()
     }
 
-    /**
-     * Persist the current drawing. Called automatically after every committed
-     * change (strokes, stamps, undo, redo) and on lifecycle pause (for pan
-     * offset, which doesn't commit a new action).
-     */
     fun saveNow() {
-        // Cancel any pending async save; do this one on IO immediately so that
-        // it completes before the app is killed.
         saveJob?.cancel()
         val snapshot = DrawingSnapshot(_actions.toList(), panOffset)
-        saveJob = viewModelScope.launch(Dispatchers.IO) {
+        saveJob = scope.launch {
             storage.save(snapshot)
         }
     }
@@ -185,7 +179,7 @@ class DrawingViewModel(application: Application) : AndroidViewModel(application)
     private fun scheduleAutoSave() {
         saveJob?.cancel()
         val snapshot = DrawingSnapshot(_actions.toList(), panOffset)
-        saveJob = viewModelScope.launch(Dispatchers.IO) {
+        saveJob = scope.launch {
             storage.save(snapshot)
         }
     }

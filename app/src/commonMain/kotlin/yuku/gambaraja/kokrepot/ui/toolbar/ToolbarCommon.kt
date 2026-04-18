@@ -3,7 +3,6 @@ package yuku.gambaraja.kokrepot.ui.toolbar
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
@@ -41,13 +40,6 @@ fun borderForToolColor(toolColor: Color): Color {
     return if (luminance > 0.5f) BorderForLightTool else BorderForDarkTool
 }
 
-/**
- * A selectable toolbar button with a dark-grey blinking selection indicator.
- *
- * The indicator is static (solid) once a tool is the selected one, and blinks briefly
- * when the user changes selection to this tool. It intentionally does **not** blink on
- * first composition — so the initial default tool does not animate at startup.
- */
 @Composable
 fun AnimatedToolButton(
     isSelected: Boolean,
@@ -86,7 +78,6 @@ fun AnimatedToolButton(
             .clip(shape)
             .background(indicator, shape)
             .clickable {
-                // Toddler-friendly tactile feedback on every tool/color tap.
                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                 onClick()
             },

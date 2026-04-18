@@ -32,18 +32,18 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
 
 val toddlerColors = listOf(
-    Color(0xFFFF0000),   // Red
-    Color(0xFFFF8C00),   // Orange
-    Color(0xFFFFD700),   // Yellow
-    Color(0xFF32CD32),   // Lime Green
-    Color(0xFF008000),   // Green
-    Color(0xFF00BFFF),   // Sky Blue
-    Color(0xFF0000FF),   // Blue
-    Color(0xFF8A2BE2),   // Purple
-    Color(0xFFFF69B4),   // Hot Pink
-    Color(0xFF8B4513),   // Brown
-    Color(0xFF000000),   // Black
-    Color(0xFF808080),   // Gray
+    Color(0xFFFF0000),
+    Color(0xFFFF8C00),
+    Color(0xFFFFD700),
+    Color(0xFF32CD32),
+    Color(0xFF008000),
+    Color(0xFF00BFFF),
+    Color(0xFF0000FF),
+    Color(0xFF8A2BE2),
+    Color(0xFFFF69B4),
+    Color(0xFF8B4513),
+    Color(0xFF000000),
+    Color(0xFF808080),
 )
 
 @Composable
@@ -91,7 +91,6 @@ fun LeftToolbar(
             color = Color.Black.copy(alpha = 0.15f)
         )
 
-        // Eraser button
         AnimatedToolButton(
             isSelected = isEraserSelected,
             onClick = onEraserSelected
@@ -103,11 +102,6 @@ fun LeftToolbar(
     }
 }
 
-/**
- * A tilted eraser: a long rounded rectangle rotated roughly -35°, with a
- * coral/red main body, a yellow stripe running lengthwise through the body,
- * and a white "rubber" cap at the low end. Heavy dark outlines on every piece.
- */
 @Composable
 private fun EraserIcon(modifier: Modifier = Modifier) {
     Canvas(modifier = modifier) {
@@ -122,10 +116,6 @@ private fun EraserIcon(modifier: Modifier = Modifier) {
         val strokePx = (w * 0.055f).coerceAtLeast(1.5f)
 
         rotate(degrees = -35f, pivot = Offset(cx, cy)) {
-            // Overall eraser bounds (pre-rotation).
-            // Slightly less than full width/height so that the 35° rotation
-            // doesn't push the corners (or the outline stroke) outside the
-            // Canvas bounds.
             val bodyW = w * 0.85f
             val bodyH = h * 0.32f
             val left = cx - bodyW / 2f
@@ -134,13 +124,10 @@ private fun EraserIcon(modifier: Modifier = Modifier) {
             val bottom = cy + bodyH / 2f
             val corner = bodyH * 0.22f
 
-            // The low-left end is the white "rubber" cap — about the first 30%.
             val capRight = left + bodyW * 0.30f
-            // The yellow stripe runs horizontally through the middle of the red part.
             val stripeTop = top + bodyH * 0.36f
             val stripeBottom = bottom - bodyH * 0.36f
 
-            // --- White cap ---
             val capPath = Path().apply {
                 addRoundRect(
                     RoundRect(
@@ -154,7 +141,6 @@ private fun EraserIcon(modifier: Modifier = Modifier) {
             }
             drawPath(capPath, Color.White)
 
-            // --- Red body ---
             val bodyPath = Path().apply {
                 addRoundRect(
                     RoundRect(
@@ -168,15 +154,12 @@ private fun EraserIcon(modifier: Modifier = Modifier) {
             }
             drawPath(bodyPath, redColor)
 
-            // --- Yellow stripe across the red body ---
             drawRect(
                 color = yellowColor,
                 topLeft = Offset(capRight, stripeTop),
                 size = Size(right - capRight, stripeBottom - stripeTop),
             )
 
-            // --- Outlines ---
-            // Full body outline (rounded rectangle around white + red).
             drawRoundRect(
                 color = outlineColor,
                 topLeft = Offset(left, top),
@@ -184,14 +167,12 @@ private fun EraserIcon(modifier: Modifier = Modifier) {
                 cornerRadius = CornerRadius(corner, corner),
                 style = Stroke(width = strokePx),
             )
-            // Divider between white cap and red body.
             drawLine(
                 color = outlineColor,
                 start = Offset(capRight, top),
                 end = Offset(capRight, bottom),
                 strokeWidth = strokePx,
             )
-            // Top and bottom edges of the yellow stripe.
             drawLine(
                 color = outlineColor,
                 start = Offset(capRight, stripeTop),
