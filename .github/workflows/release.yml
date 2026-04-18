@@ -38,7 +38,10 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
             echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
           else
-            VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
+            # `val appVersionName = "x.y.z"` is declared at the top of
+            # app/build.gradle.kts and reused by both `android { versionName }`
+            # and the generated BuildInfo, so we extract from there.
+            VERSION=$(grep '^val appVersionName' app/build.gradle.kts | sed 's/.*"\(.*\)".*/\1/')
             echo "VERSION=v${VERSION}" >> $GITHUB_OUTPUT
           fi
 
