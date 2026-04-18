@@ -46,13 +46,17 @@ val toddlerColors = listOf(
     Color(0xFF808080),
 )
 
+/** The color whose button press is part of the hidden settings gesture. */
+val SecretGestureColor: Color = Color(0xFF808080)
+
 @Composable
 fun LeftToolbar(
     selectedColor: Color,
     isEraserSelected: Boolean,
     onColorSelected: (Color) -> Unit,
     onEraserSelected: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSecretColorPressedChange: ((Boolean) -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
@@ -73,7 +77,8 @@ fun LeftToolbar(
                 val isSelected = color == selectedColor && !isEraserSelected
                 AnimatedToolButton(
                     isSelected = isSelected,
-                    onClick = { onColorSelected(color) }
+                    onClick = { onColorSelected(color) },
+                    onPressedChange = if (color == SecretGestureColor) onSecretColorPressedChange else null,
                 ) {
                     Box(
                         modifier = Modifier

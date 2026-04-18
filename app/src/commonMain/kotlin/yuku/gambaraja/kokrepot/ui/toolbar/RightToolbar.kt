@@ -37,6 +37,9 @@ import yuku.gambaraja.kokrepot.stamp.drawStamp
 
 val thicknesses = listOf(4f, 8f, 14f, 22f, 32f)
 
+/** The stamp whose button press is part of the hidden settings gesture. */
+val SecretGestureStamp: StampType = StampType.SMILEY
+
 private val stampTools = listOf(
     Tool.STAMP_HEART to StampType.HEART,
     Tool.STAMP_STAR to StampType.STAR,
@@ -57,7 +60,8 @@ fun RightToolbar(
     onToolSelected: (Tool) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onSecretStampPressedChange: ((Boolean) -> Unit)? = null,
 ) {
     val isStampMode = selectedTool.isStamp
     val iconColor = if (isEraserSelected) Color.White else selectedColor
@@ -104,7 +108,8 @@ fun RightToolbar(
             Spacer(modifier = Modifier.height(4.dp))
 
             stampTools.forEach { (tool, stampType) ->
-                StampToolButton(tool, stampType, selectedTool, iconColor, iconBorderColor, onToolSelected)
+                val pressCallback = if (stampType == SecretGestureStamp) onSecretStampPressedChange else null
+                StampToolButton(tool, stampType, selectedTool, iconColor, iconBorderColor, onToolSelected, pressCallback)
             }
         }
 
@@ -154,10 +159,12 @@ private fun StampToolButton(
     iconColor: Color,
     borderColor: Color,
     onToolSelected: (Tool) -> Unit,
+    onPressedChange: ((Boolean) -> Unit)? = null,
 ) {
     AnimatedToolButton(
         isSelected = selectedTool == tool,
-        onClick = { onToolSelected(tool) }
+        onClick = { onToolSelected(tool) },
+        onPressedChange = onPressedChange,
     ) {
         Canvas(modifier = Modifier.size(26.dp)) {
             drawStamp(
