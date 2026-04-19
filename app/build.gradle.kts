@@ -82,6 +82,41 @@ kotlin {
         binaries.executable()
     }
 
+    // After the web distribution is assembled, rewrite the output index.html to
+    // append a cache-busting query string (short git hash + unix seconds) to the
+    // main JS script tag. The hashed chunk filenames webpack emits already
+    // cache-bust themselves, but `gambar-aja-kok-repot.js` and `index.html` use
+    // fixed names — so returning users would otherwise load stale JS from the
+    // browser cache after a new deploy.
+    tasks.matching { it.name == "wasmJsBrowserDistribution" }.configureEach {
+        doLast {
+            val indexHtml = layout.buildDirectory
+                .file("dist/wasmJs/productionExecutable/index.html").get().asFile
+            if (!indexHtml.exists()) return@doLast
+
+            val gitHash = try {
+                val proc = ProcessBuilder("git", "rev-parse", "--short=7", "HEAD")
+                    .directory(rootProject.projectDir)
+                    .redirectErrorStream(true)
+                    .start()
+                proc.inputStream.bufferedReader().readText().trim().also { proc.waitFor() }
+            } catch (e: Exception) {
+                "unknown"
+            }
+            val cacheBuster = "$gitHash-${System.currentTimeMillis() / 1000L}"
+
+            val original = indexHtml.readText()
+            val rewritten = original.replace(
+                "src=\"gambar-aja-kok-repot.js\"",
+                "src=\"gambar-aja-kok-repot.js?v=$cacheBuster\""
+            )
+            if (rewritten != original) {
+                indexHtml.writeText(rewritten)
+                println("[cacheBust] index.html -> gambar-aja-kok-repot.js?v=$cacheBuster")
+            }
+        }
+    }
+
     sourceSets {
         commonMain {
             kotlin.srcDir(generateBuildInfo)
