@@ -2,7 +2,7 @@ name: Deploy Web (Wasm) to GitHub Pages
 
 on:
   push:
-    branches: [main, "claude/add-web-kmp-**"]
+    branches: [main, "claude/add-web-kmp-**", "claude/mario-paint-**"]
   workflow_dispatch:
 
 permissions:
@@ -53,8 +53,9 @@ jobs:
         with:
           path: app/build/dist/wasmJs/productionExecutable
 
-  # The `on:` filter above already restricts this workflow to `main` and
-  # `claude/add-web-kmp-**`, so we publish from whichever of those pushed last.
+  # The `on:` filter above already restricts this workflow to `main`,
+  # `claude/add-web-kmp-**`, and `claude/mario-paint-**`, so we publish from
+  # whichever of those pushed last.
   deploy:
     needs: build
     runs-on: ubuntu-latest

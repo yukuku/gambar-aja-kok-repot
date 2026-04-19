@@ -11,8 +11,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.PI
+import kotlin.random.Random
+import kotlin.time.TimeSource
 import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.model.Particle
+import yuku.gambaraja.kokrepot.model.StampEffect
 import yuku.gambaraja.kokrepot.model.Tool
 
 /**
@@ -24,6 +30,7 @@ class DrawingViewModel(private val storage: DrawingStorage) {
 
     companion object {
         const val STAMP_FIXED_SIZE = 50f
+        const val STAMP_EFFECT_DURATION_MS = 600L
     }
 
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -53,6 +60,11 @@ class DrawingViewModel(private val storage: DrawingStorage) {
     val actions: List<DrawingAction> get() = _actions
 
     private val _redoStack = mutableListOf<DrawingAction>()
+
+    private val _stampEffects = mutableStateListOf<StampEffect>()
+    val stampEffects: List<StampEffect> get() = _stampEffects
+
+    private var effectIdCounter = 0L
 
     private var saveJob: Job? = null
 
@@ -132,6 +144,7 @@ class DrawingViewModel(private val storage: DrawingStorage) {
             _actions.add(stamp)
             _redoStack.clear()
             updateUndoRedo()
+            emitStampEffect(stamp)
         } else {
             val isEraser = selectedTool == Tool.ERASER
             val color = if (isEraser) Color.White.toArgb() else selectedColor.toArgb()
@@ -187,5 +200,35 @@ class DrawingViewModel(private val storage: DrawingStorage) {
     private fun updateUndoRedo() {
         canUndo = _actions.isNotEmpty()
         canRedo = _redoStack.isNotEmpty()
+    }
+
+    private fun emitStampEffect(stamp: DrawingAction.Stamp) {
+        val id = effectIdCounter++
+        val effect = StampEffect(
+            id = id,
+            stamp = stamp,
+            particles = buildParticles(stamp.color, stamp.size),
+            startMark = TimeSource.Monotonic.markNow(),
+        )
+        _stampEffects.add(effect)
+        scope.launch(Dispatchers.Main) {
+            delay(STAMP_EFFECT_DURATION_MS)
+            _stampEffects.removeAll { it.id == id }
+        }
+    }
+
+    private fun buildParticles(color: Int, size: Float): List<Particle> {
+        val count = 10
+        val twoPi = (2.0 * PI).toFloat()
+        return List(count) { i ->
+            val baseAngle = (i.toFloat() / count) * twoPi
+            val jitter = (Random.nextFloat() - 0.5f) * (twoPi / count) * 0.7f
+            Particle(
+                angleRad = baseAngle + jitter,
+                distance = size * (1.4f + Random.nextFloat() * 0.9f),
+                color = color,
+                baseRadius = size * (0.09f + Random.nextFloat() * 0.07f),
+            )
+        }
     }
 }

@@ -61,6 +61,7 @@ fun DrawingApp(viewModel: DrawingViewModel) {
             isEraser = viewModel.selectedTool == Tool.ERASER,
             isStampTool = viewModel.selectedTool.isStamp,
             stampSize = DrawingViewModel.STAMP_FIXED_SIZE,
+            stampEffects = viewModel.stampEffects,
             onDrawStart = { viewModel.onDrawStart(it) },
             onDrawMove = { viewModel.onDrawMove(it) },
             onDrawEnd = { viewModel.onDrawEnd() },
