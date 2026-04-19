@@ -4,6 +4,13 @@
 
 ---
 
+## 🚀 Get it now
+
+- 🌐 **[Play it in your browser](https://yukuku.github.io/gambar-aja-kok-repot/)** — no install, just draw.
+- 📱 **[Download the latest Android APK (v4.0.0)](https://github.com/yukuku/gambar-aja-kok-repot/releases/latest)** — Android 10+.
+
+---
+
 You've been there. We've ALL been there.
 
 Your little one grabs your phone with those tiny, determined fingers. They want to DRAW. They want to CREATE. They want to unleash the artistic hurricane brewing inside their beautiful, chaotic little mind.
