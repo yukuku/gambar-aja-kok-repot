@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.1] - 2026-04-19
+
+### Changed
+- **Web fullscreen re-engages on every touch.** Previously, leaving the tab (or pressing Esc) dropped fullscreen and the app didn't try to restore it. Now any tap, touch, or click brings the browser back to fullscreen — a much better experience for toddlers who frequently switch tabs or accidentally exit fullscreen.
+
 ## [4.0.0] - 2026-04-18
 
 ### Added
