@@ -46,19 +46,16 @@
   });
   observer.observe(document.body, { childList: true, subtree: true });
 
-  // Request browser fullscreen in response to the first user gesture.
+  // Request browser fullscreen in response to user gestures — and re-request
+  // every time the user touches after fullscreen has been dropped (e.g. after
+  // switching to another tab and back, or after pressing Esc). A toddler-
+  // friendly UX: any touch should restore the immersive canvas.
   //
-  // Browsers require this to be called inside a real user-activation (pointer
-  // or key) event handler, so we can't do it on page load. We listen for the
-  // broadest set of events (click/touchend/pointerup/keydown) in the CAPTURE
-  // phase — this fires before Compose's canvas handler can stopPropagation or
-  // consume the event, and matches the user-activation contract in all
-  // Chromium variants (Chrome/Opera/Edge) as well as Firefox and Safari.
-  //
-  // We re-try on every gesture until fullscreen actually engages, because
-  // some browsers reject the first call (e.g. if the .wasm hasn't finished
-  // streaming yet, or if an earlier promise chain in `requestFullscreen()`
-  // consumed user activation).
+  // Browsers require requestFullscreen to be called inside a real user-
+  // activation (pointer or key) event handler, so we can't do it on page load.
+  // We listen in the CAPTURE phase so we fire before Compose's canvas handler
+  // can consume the event, matching the user-activation contract across
+  // Chromium (Chrome/Opera/Edge), Firefox, and Safari.
   const FS_EVENTS = ['click', 'touchend', 'pointerup', 'keydown'];
   function inFullscreen() {
     return !!(document.fullscreenElement
@@ -67,33 +64,26 @@
            || document.msFullscreenElement);
   }
   function tryEnterFullscreen() {
-    if (inFullscreen()) { detachFsListeners(); return; }
+    if (inFullscreen()) return;
     const el = document.documentElement;
     const req = el.requestFullscreen
              || el.webkitRequestFullscreen
              || el.mozRequestFullScreen
              || el.msRequestFullscreen;
-    if (!req) { detachFsListeners(); return; }
+    if (!req) return;
     try {
       const result = req.call(el);
       if (result && typeof result.then === 'function') {
-        result.then(detachFsListeners).catch(function (err) {
-          // Don't detach — keep listening so the next user gesture can retry.
+        result.catch(function (err) {
           // Common rejection: "API can only be initiated by a user gesture"
-          // — which can happen if Compose already marked the event handled.
+          // — can happen if Compose already marked the event handled, or the
+          // browser is rate-limiting after a recent Esc. Next gesture retries.
           console.warn('requestFullscreen rejected, will retry on next gesture:', err);
         });
-      } else {
-        detachFsListeners();
       }
     } catch (err) {
       console.warn('requestFullscreen threw, will retry on next gesture:', err);
     }
-  }
-  function detachFsListeners() {
-    FS_EVENTS.forEach(function (ev) {
-      window.removeEventListener(ev, tryEnterFullscreen, true);
-    });
   }
   FS_EVENTS.forEach(function (ev) {
     window.addEventListener(ev, tryEnterFullscreen, true);
