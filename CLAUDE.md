@@ -142,6 +142,29 @@ app/src/
 
 The web (Wasm) build is automatically deployed to GitHub Pages by `.github/workflows/pages.yml` on every push to `main` (and to `claude/add-web-kmp-*` branches for preview builds). The live URL is configured in the repository's Pages settings.
 
+The `wasmJsBrowserDistribution` Gradle task post-processes the output `index.html` to append a cache-busting query string (`?v=<shortGitHash>-<unixSeconds>`) to the main JS reference, so returning users always pick up the freshly built bundle instead of the browser-cached copy.
+
+## Verifying a deploy or release
+
+After either a web deploy or an Android release, check the hidden settings dialog (hold grey color + smiley stamp simultaneously, then tap the cog). The expected **Version** line is:
+
+```
+<versionName>.<shortGitHash>
+```
+
+where:
+- `<versionName>` is the value of `appVersionName` in `app/build.gradle.kts` at the moment the binary was built (e.g. `4.0.1`).
+- `<shortGitHash>` is the 7-character short hash of the git commit the CI job checked out. For both the Pages workflow (`pages.yml`) and the release workflow (`release.yml`), that is the head commit of `main` at the time the workflow ran.
+
+So, for example, if `main` is at `23c9872…` and `appVersionName` is `4.0.1`, the settings dialog should read:
+
+```
+Version   4.0.1.23c9872
+Built     <local time of the CI build>
+```
+
+If the displayed hash does not match the `main` HEAD you expect, the deploy either did not run for your push, or the CDN/browser is still serving a previous build — hard-refresh the page. The cache-bust query string on `gambar-aja-kok-repot.js` should already prevent the latter on fresh deploys.
+
 ## Signing
 
 The release keystore is committed to `keystore/release.jks` intentionally. Credentials are in `keystore.properties`:
