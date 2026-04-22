@@ -27,14 +27,15 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 18px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 16px;
             color: #555;
+            white-space: pre;
         }
     </style>
 </head>
 <body>
-<div id="loader">Loading…</div>
+<div id="loader">Loading ...</div>
 <script type="application/javascript">
   // Hide the loader once Compose mounts its canvas.
   const observer = new MutationObserver(() => {
@@ -45,6 +46,94 @@
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Loading progress bar. The app bundle is ~10 MB (JS + two .wasm files), so a
+  // static "Loading ..." sits for several seconds on slow connections. We track
+  // bytes received vs Content-Length across every .js / .wasm fetch and render
+  // an ASCII bar like:  Loading ... (==============-------------------------)
+  //
+  // - The main JS is fetched here (instead of a <script src=…> tag) so we can
+  //   observe its byte stream; it's then executed via a Blob URL.
+  // - Subsequent WASM fetches initiated by the Kotlin/Wasm runtime are caught
+  //   by wrapping window.fetch. We clone the Response so the consumer
+  //   (WebAssembly.instantiateStreaming, typically) still gets a fresh body.
+  // - Content-Length can reflect a compressed size while the reader yields
+  //   decompressed bytes, so the fraction is clamped to 1.0.
+  (function () {
+    const loader = document.getElementById('loader');
+    const BAR_LEN = 40;
+    const state = { received: 0, total: 0 };
+
+    function render() {
+      if (state.total === 0) {
+        loader.textContent = 'Loading ...';
+        return;
+      }
+      const frac = Math.min(1, state.received / state.total);
+      const filled = Math.round(frac * BAR_LEN);
+      loader.textContent =
+        'Loading ... (' +
+        '='.repeat(filled) +
+        '-'.repeat(BAR_LEN - filled) +
+        ')';
+    }
+
+    function trackStream(response) {
+      const len = Number(response.headers.get('Content-Length')) || 0;
+      if (len > 0) {
+        state.total += len;
+        render();
+      }
+      const reader = response.body.getReader();
+      return new Promise(function (resolve, reject) {
+        const chunks = [];
+        (function pump() {
+          reader.read().then(function (r) {
+            if (r.done) { resolve(chunks); return; }
+            chunks.push(r.value);
+            state.received += r.value.length;
+            render();
+            pump();
+          }, reject);
+        })();
+      });
+    }
+
+    // Intercept WASM fetches (initiated from inside the Kotlin/Wasm bootstrap).
+    const origFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      const url = typeof input === 'string'
+        ? input
+        : (input && input.url) ? input.url : '';
+      const p = origFetch(input, init);
+      if (/\.wasm(\?|$)/i.test(url)) {
+        return p.then(function (resp) {
+          if (!resp.ok || !resp.body) return resp;
+          trackStream(resp.clone()).catch(function () {});
+          return resp;
+        });
+      }
+      return p;
+    };
+
+    // Fetch and execute the main app bundle with progress tracking. The build
+    // rewrites APP_SCRIPT_URL to add a cache-busting query string.
+    const APP_SCRIPT_URL = "gambar-aja-kok-repot.js";
+    render();
+    origFetch(APP_SCRIPT_URL).then(function (resp) {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      return trackStream(resp);
+    }).then(function (chunks) {
+      const blob = new Blob(chunks, { type: 'application/javascript' });
+      const url = URL.createObjectURL(blob);
+      const script = document.createElement('script');
+      script.src = url;
+      script.onload = function () { URL.revokeObjectURL(url); };
+      document.body.appendChild(script);
+    }).catch(function (e) {
+      loader.textContent = 'Failed to load: ' + (e && e.message ? e.message : e);
+    });
+  })();
 
   // Request browser fullscreen in response to user gestures — and re-request
   // every time the user touches after fullscreen has been dropped (e.g. after
@@ -89,6 +178,5 @@
     window.addEventListener(ev, tryEnterFullscreen, true);
   });
 </script>
-<script type="application/javascript" src="gambar-aja-kok-repot.js"></script>
 </body>
 </html>
