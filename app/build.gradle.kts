@@ -1,5 +1,7 @@
 @file:OptIn(org.jetbrains.kotlin.gradle.ExperimentalWasmDsl::class)
 
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
@@ -82,13 +84,16 @@ kotlin {
         binaries.executable()
     }
 
-    // After the web distribution is assembled, rewrite the output index.html to
-    // append a cache-busting query string (short git hash + unix seconds) to
-    // the APP_SCRIPT_URL constant the loader uses to fetch the main JS bundle.
-    // The hashed chunk filenames webpack emits already cache-bust themselves,
-    // but `gambar-aja-kok-repot.js` and `index.html` use fixed names — so
-    // returning users would otherwise load stale JS from the browser cache
-    // after a new deploy.
+    // After the web distribution is assembled, rewrite the output index.html:
+    //   1. Append a cache-busting query string (short git hash + unix seconds)
+    //      to the APP_SCRIPT_URL constant the loader uses to fetch the main JS
+    //      bundle. Webpack's hashed chunk filenames already cache-bust, but
+    //      `gambar-aja-kok-repot.js` and `index.html` use fixed names — so
+    //      returning users would otherwise load stale JS from the browser cache
+    //      after a new deploy.
+    //   2. Replace the __VERSION_LABEL__ placeholder with the full version
+    //      (appVersionName + short git hash) and the CI build timestamp, so the
+    //      loading page immediately shows which build is being served.
     tasks.matching { it.name == "wasmJsBrowserDistribution" }.configureEach {
         doLast {
             val indexHtml = layout.buildDirectory
@@ -105,15 +110,20 @@ kotlin {
                 "unknown"
             }
             val cacheBuster = "$gitHash-${System.currentTimeMillis() / 1000L}"
+            val buildTimestamp = SimpleDateFormat("yyyy-MM-dd HH:mm z").format(Date())
+            val versionLabel = "v$appVersionName.$gitHash · built $buildTimestamp"
 
             val original = indexHtml.readText()
-            val rewritten = original.replace(
-                "APP_SCRIPT_URL = \"gambar-aja-kok-repot.js\"",
-                "APP_SCRIPT_URL = \"gambar-aja-kok-repot.js?v=$cacheBuster\""
-            )
+            val rewritten = original
+                .replace(
+                    "APP_SCRIPT_URL = \"gambar-aja-kok-repot.js\"",
+                    "APP_SCRIPT_URL = \"gambar-aja-kok-repot.js?v=$cacheBuster\""
+                )
+                .replace("__VERSION_LABEL__", versionLabel)
             if (rewritten != original) {
                 indexHtml.writeText(rewritten)
                 println("[cacheBust] index.html -> gambar-aja-kok-repot.js?v=$cacheBuster")
+                println("[version]   $versionLabel")
             }
         }
     }
