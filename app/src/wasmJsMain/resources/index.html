@@ -125,16 +125,21 @@
 
   // Loading progress. The app bundle is ~10 MB (JS + two .wasm files), so a
   // static "Loading..." sits silent for several seconds on slow connections.
-  // We aggregate bytes received vs Content-Length across every .js / .wasm
-  // fetch and drive the width of #loader-fill.
+  // We aggregate bytes received vs Content-Length across every .wasm fetch
+  // and drive the width of #loader-fill.
   //
-  // - The main JS is fetched here (instead of a <script src=…> tag) so we can
-  //   observe its byte stream; it's then executed via a Blob URL.
-  // - Subsequent WASM fetches initiated by the Kotlin/Wasm runtime are caught
-  //   by wrapping window.fetch. We clone the Response so the consumer
-  //   (WebAssembly.instantiateStreaming, typically) still gets a fresh body.
-  // - Content-Length can reflect a compressed size while the reader yields
-  //   decompressed bytes, so the fraction is clamped to 1.0.
+  // We don't track the main JS bundle itself: it's loaded via a real
+  // <script src=…> element so webpack's runtime can use document.currentScript
+  // to resolve chunk URLs (fetching JS via fetch() + Blob URL broke that —
+  // relative .wasm lookups would resolve against the blob: URL and fail).
+  // The JS is only ~5% of the total bytes, so progress still moves smoothly
+  // once WASM streaming kicks in.
+  //
+  // WASM fetches initiated by the Kotlin/Wasm runtime are caught by wrapping
+  // window.fetch. We clone the Response so the consumer
+  // (WebAssembly.instantiateStreaming, typically) still gets a fresh body.
+  // Content-Length can reflect a compressed size while the reader yields
+  // decompressed bytes, so the fraction is clamped to 1.0.
   (function () {
     const fill = document.getElementById('loader-fill');
     const state = { received: 0, total: 0 };
@@ -152,18 +157,14 @@
         render();
       }
       const reader = response.body.getReader();
-      return new Promise(function (resolve, reject) {
-        const chunks = [];
-        (function pump() {
-          reader.read().then(function (r) {
-            if (r.done) { resolve(chunks); return; }
-            chunks.push(r.value);
-            state.received += r.value.length;
-            render();
-            pump();
-          }, reject);
-        })();
-      });
+      (function pump() {
+        reader.read().then(function (r) {
+          if (r.done) return;
+          state.received += r.value.length;
+          render();
+          pump();
+        }, function () {});
+      })();
     }
 
     // Intercept WASM fetches (initiated from inside the Kotlin/Wasm bootstrap).
@@ -176,30 +177,24 @@
       if (/\.wasm(\?|$)/i.test(url)) {
         return p.then(function (resp) {
           if (!resp.ok || !resp.body) return resp;
-          trackStream(resp.clone()).catch(function () {});
+          try { trackStream(resp.clone()); } catch (e) {}
           return resp;
         });
       }
       return p;
     };
 
-    // Fetch and execute the main app bundle with progress tracking. The build
-    // rewrites APP_SCRIPT_URL to add a cache-busting query string.
+    // Load the main app bundle via a real <script src=…> so webpack's chunk
+    // resolution works. The build rewrites APP_SCRIPT_URL to add a
+    // cache-busting query string.
     const APP_SCRIPT_URL = "gambar-aja-kok-repot.js";
-    origFetch(APP_SCRIPT_URL).then(function (resp) {
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      return trackStream(resp);
-    }).then(function (chunks) {
-      const blob = new Blob(chunks, { type: 'application/javascript' });
-      const url = URL.createObjectURL(blob);
-      const script = document.createElement('script');
-      script.src = url;
-      script.onload = function () { URL.revokeObjectURL(url); };
-      document.body.appendChild(script);
-    }).catch(function (e) {
+    const script = document.createElement('script');
+    script.src = APP_SCRIPT_URL;
+    script.onerror = function () {
       const title = document.getElementById('loader-title');
-      if (title) title.textContent = 'Failed to load: ' + (e && e.message ? e.message : e);
-    });
+      if (title) title.textContent = 'Failed to load app bundle';
+    };
+    document.body.appendChild(script);
   })();
 
   // Request browser fullscreen in response to user gestures — and re-request
