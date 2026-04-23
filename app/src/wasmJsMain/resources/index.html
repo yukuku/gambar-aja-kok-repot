@@ -110,7 +110,7 @@
 <div id="loader">
     <div id="loader-title">Loading<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>
     <div id="loader-bar"><div id="loader-fill"></div></div>
-    <div id="loader-version">__VERSION_LABEL__</div>
+    <div id="loader-version" data-build-unix="__BUILD_UNIX__">v__APP_VERSION__</div>
 </div>
 <script type="application/javascript">
   // Hide the loader once Compose mounts its canvas.
@@ -195,6 +195,19 @@
       if (title) title.textContent = 'Failed to load app bundle';
     };
     document.body.appendChild(script);
+
+    // Render the build time in the viewer's local timezone (the server-side
+    // value is Unix seconds, so we don't bake "UTC" into the HTML).
+    const vEl = document.getElementById('loader-version');
+    const buildUnix = Number(vEl && vEl.dataset.buildUnix);
+    if (buildUnix > 0) {
+      const d = new Date(buildUnix * 1000);
+      const local = d.toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+      vEl.textContent = vEl.textContent + ' · built ' + local;
+    }
   })();
 
   // Request browser fullscreen in response to user gestures — and re-request
