@@ -17,8 +17,8 @@ val keystoreProperties = Properties().apply {
     }
 }
 
-val appVersionName = "4.0.1"
-val appVersionCode = 11
+val appVersionName = "4.0.2"
+val appVersionCode = 12
 
 // Generates a small Kotlin file in commonMain with the version, git short hash
 // of the current HEAD, and the unix time of this build. Consumed by the hidden

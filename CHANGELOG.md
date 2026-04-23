@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.2] - 2026-04-23
+
+### Added
+- **Web loading screen now shows a progress bar.** The ~10 MB wasm bundle used to sit behind a silent "Loading…" text for several seconds. The loading screen now displays a colorful rainbow progress bar (with gliding glitter stripes) that tracks WASM download progress, plus the full version and build time — rendered in the viewer's local timezone — so you can tell at a glance which build is being served.
+
 ## [4.0.1] - 2026-04-19
 
 ### Changed

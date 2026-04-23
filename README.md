@@ -7,7 +7,7 @@
 ## 🚀 Get it now
 
 - 🌐 **[Play it in your browser](https://yukuku.github.io/gambar-aja-kok-repot/)** — no install, just draw.
-- 📱 **[Download the latest Android APK (v4.0.0)](https://github.com/yukuku/gambar-aja-kok-repot/releases/latest)** — Android 10+.
+- 📱 **[Download the latest Android APK (v4.0.2)](https://github.com/yukuku/gambar-aja-kok-repot/releases/latest)** — Android 10+.
 
 ---
 
