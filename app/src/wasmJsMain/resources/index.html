@@ -25,16 +25,93 @@
             position: fixed;
             inset: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
+            gap: 18px;
+            background: #ffffff;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 18px;
             color: #555;
+        }
+        #loader-title {
+            font-size: 22px;
+            font-weight: 500;
+            letter-spacing: 0.01em;
+            display: inline-flex;
+            gap: 2px;
+        }
+        #loader-title .dot {
+            display: inline-block;
+            animation: bobble 0.9s ease-in-out infinite;
+        }
+        #loader-title .dot:nth-child(2) { animation-delay: 0.1s; }
+        #loader-title .dot:nth-child(3) { animation-delay: 0.2s; }
+        @keyframes bobble {
+            0%, 60%, 100% { transform: translateY(0); }
+            30%           { transform: translateY(-6px); }
+        }
+        #loader-bar {
+            position: relative;
+            width: min(70vw, 360px);
+            height: 16px;
+            background: #f0f0f0;
+            border-radius: 999px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
+        }
+        #loader-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 0%;
+            border-radius: 999px;
+            background: linear-gradient(
+                90deg,
+                #ef4444, #f59e0b, #eab308, #22c55e,
+                #3b82f6, #8b5cf6, #ec4899, #ef4444
+            );
+            background-size: 200% 100%;
+            animation: glide 1.6s linear infinite;
+            transition: width 0.25s ease-out;
+            overflow: hidden;
+        }
+        /* Diagonal glitter stripes sliding over the rainbow fill. */
+        #loader-fill::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: linear-gradient(
+                45deg,
+                rgba(255, 255, 255, 0.35) 25%, transparent 25%,
+                transparent 50%, rgba(255, 255, 255, 0.35) 50%,
+                rgba(255, 255, 255, 0.35) 75%, transparent 75%
+            );
+            background-size: 18px 18px;
+            animation: stripes 0.8s linear infinite;
+        }
+        @keyframes glide {
+            from { background-position:   0% 0; }
+            to   { background-position: -200% 0; }
+        }
+        @keyframes stripes {
+            from { background-position: 0 0; }
+            to   { background-position: 18px 0; }
+        }
+        #loader-version {
+            font-size: 11px;
+            color: #aaa;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            letter-spacing: 0.02em;
         }
     </style>
 </head>
 <body>
-<div id="loader">Loading…</div>
+<div id="loader">
+    <div id="loader-title">Loading<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>
+    <div id="loader-bar"><div id="loader-fill"></div></div>
+    <div id="loader-version" data-build-unix="__BUILD_UNIX__">v__APP_VERSION__</div>
+</div>
 <script type="application/javascript">
   // Hide the loader once Compose mounts its canvas.
   const observer = new MutationObserver(() => {
@@ -45,6 +122,93 @@
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Loading progress. The app bundle is ~10 MB (JS + two .wasm files), so a
+  // static "Loading..." sits silent for several seconds on slow connections.
+  // We aggregate bytes received vs Content-Length across every .wasm fetch
+  // and drive the width of #loader-fill.
+  //
+  // We don't track the main JS bundle itself: it's loaded via a real
+  // <script src=…> element so webpack's runtime can use document.currentScript
+  // to resolve chunk URLs (fetching JS via fetch() + Blob URL broke that —
+  // relative .wasm lookups would resolve against the blob: URL and fail).
+  // The JS is only ~5% of the total bytes, so progress still moves smoothly
+  // once WASM streaming kicks in.
+  //
+  // WASM fetches initiated by the Kotlin/Wasm runtime are caught by wrapping
+  // window.fetch. We clone the Response so the consumer
+  // (WebAssembly.instantiateStreaming, typically) still gets a fresh body.
+  // Content-Length can reflect a compressed size while the reader yields
+  // decompressed bytes, so the fraction is clamped to 1.0.
+  (function () {
+    const fill = document.getElementById('loader-fill');
+    const state = { received: 0, total: 0 };
+
+    function render() {
+      if (state.total === 0) return;
+      const frac = Math.min(1, state.received / state.total);
+      fill.style.width = (frac * 100).toFixed(1) + '%';
+    }
+
+    function trackStream(response) {
+      const len = Number(response.headers.get('Content-Length')) || 0;
+      if (len > 0) {
+        state.total += len;
+        render();
+      }
+      const reader = response.body.getReader();
+      (function pump() {
+        reader.read().then(function (r) {
+          if (r.done) return;
+          state.received += r.value.length;
+          render();
+          pump();
+        }, function () {});
+      })();
+    }
+
+    // Intercept WASM fetches (initiated from inside the Kotlin/Wasm bootstrap).
+    const origFetch = window.fetch.bind(window);
+    window.fetch = function (input, init) {
+      const url = typeof input === 'string'
+        ? input
+        : (input && input.url) ? input.url : '';
+      const p = origFetch(input, init);
+      if (/\.wasm(\?|$)/i.test(url)) {
+        return p.then(function (resp) {
+          if (!resp.ok || !resp.body) return resp;
+          try { trackStream(resp.clone()); } catch (e) {}
+          return resp;
+        });
+      }
+      return p;
+    };
+
+    // Load the main app bundle via a real <script src=…> so webpack's chunk
+    // resolution works. The build rewrites APP_SCRIPT_URL to add a
+    // cache-busting query string.
+    const APP_SCRIPT_URL = "gambar-aja-kok-repot.js";
+    const script = document.createElement('script');
+    script.src = APP_SCRIPT_URL;
+    script.onerror = function () {
+      const title = document.getElementById('loader-title');
+      if (title) title.textContent = 'Failed to load app bundle';
+    };
+    document.body.appendChild(script);
+
+    // Render the build time in the viewer's local timezone (the server-side
+    // value is Unix seconds, so we don't bake "UTC" into the HTML).
+    const vEl = document.getElementById('loader-version');
+    const buildUnix = Number(vEl && vEl.dataset.buildUnix);
+    if (buildUnix > 0) {
+      const d = new Date(buildUnix * 1000);
+      const local = d.toLocaleString(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+      });
+      vEl.textContent = vEl.textContent + ' · built ' + local;
+    }
+  })();
 
   // Request browser fullscreen in response to user gestures — and re-request
   // every time the user touches after fullscreen has been dropped (e.g. after
@@ -89,6 +253,5 @@
     window.addEventListener(ev, tryEnterFullscreen, true);
   });
 </script>
-<script type="application/javascript" src="gambar-aja-kok-repot.js"></script>
 </body>
 </html>
