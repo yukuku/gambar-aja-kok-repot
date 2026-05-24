@@ -84,7 +84,7 @@ app/src/
 │   │   ├── DrawingAction.kt     # Sealed class: Stroke (points+color+thickness) and Stamp (center+type+color+size)
 │   │   └── Enums.kt             # Tool enum (BRUSH, ERASER, STAMP_*), StampType enum
 │   ├── ui/
-│   │   ├── canvas/DrawingCanvas.kt    # Compose Canvas: viewport culling, touch handling (1-finger draw, 3-finger pan)
+│   │   ├── canvas/DrawingCanvas.kt    # Compose Canvas: viewport culling, touch handling (1-3 finger simultaneous draw, 4-finger pan)
 │   │   └── toolbar/{LeftToolbar,RightToolbar,ToolbarCommon}.kt
 │   └── stamp/StampRenderer.kt   # DrawScope extensions: drawHeart, drawStar, drawSpiral, drawSmiley, drawSquare
 ├── androidMain/
@@ -112,8 +112,8 @@ app/src/
 
 ### Touch handling (in DrawingCanvas.kt)
 
-- **1 finger**: draw stroke or place stamp on tap
-- **3 fingers**: pan — once 3 pointers are detected, the gesture locks into pan mode and cancels any in-progress stroke
+- **1-3 fingers**: each finger draws its own independent stroke (or sprinkles its own stamps) — so 2-3 toddlers can paint on the same screen at once. In-progress strokes are stored in `DrawingViewModel.currentStrokes`, keyed by `PointerId.value`.
+- **4 fingers**: pan — once 4 pointers are on screen, the gesture locks into pan mode and cancels every in-progress stroke (stamps already committed via `onTap` stay)
 - Coordinate conversion: `worldPos = screenPos - panOffset`
 
 ## UI Layout
@@ -124,8 +124,8 @@ app/src/
 | Toolbar  |        Drawing Canvas           | Toolbar  |
 |          |       (white background)        |          |
 | 12 color |                                 | 5 thick  |
-| circles  |    1-finger: draw/stamp         | -------- |
-|          |    3-finger: pan                | 5 stamps |
+| circles  |    1-3 fingers: draw/stamp      | -------- |
+|          |    4-finger: pan                | 5 stamps |
 | -------- |                                 | -------- |
 | Eraser   |                                 | Undo     |
 |          |                                 | Redo     |

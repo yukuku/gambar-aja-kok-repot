@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -46,20 +46,29 @@ private fun smoothedStrokePath(points: List<Offset>): Path {
     return path
 }
 
+private class PointerGestureState(
+    val startScreenPos: Offset,
+    var hasMoved: Boolean = false,
+    var lastStampPos: Offset? = null,
+)
+
+private const val PAN_FINGER_COUNT = 4
+
 @Composable
 fun DrawingCanvas(
     actions: List<DrawingAction>,
     panOffset: Offset,
-    currentStrokePoints: List<Offset>,
+    currentStrokes: Map<Long, List<Offset>>,
     currentColor: Color,
     currentThickness: Float,
     isEraser: Boolean,
     isStampTool: Boolean,
     stampSize: Float,
-    onDrawStart: (Offset) -> Unit,
-    onDrawMove: (Offset) -> Unit,
-    onDrawEnd: () -> Unit,
-    onDrawCancel: () -> Unit,
+    onDrawStart: (Long, Offset) -> Unit,
+    onDrawMove: (Long, Offset) -> Unit,
+    onDrawEnd: (Long) -> Unit,
+    onDrawCancel: (Long) -> Unit,
+    onDrawCancelAll: () -> Unit,
     onTap: (Offset) -> Unit,
     onPanDelta: (Offset) -> Unit,
     modifier: Modifier = Modifier
@@ -79,116 +88,121 @@ fun DrawingCanvas(
             .fillMaxSize()
             .pointerInput(Unit) {
                 awaitPointerEventScope {
+                    val pointerStates = mutableMapOf<PointerId, PointerGestureState>()
+                    var isPanning = false
+                    var lastPanCentroid: Offset? = null
+
                     while (true) {
-                        val downEvent = awaitPointerEvent()
-                        if (downEvent.type != PointerEventType.Press) continue
+                        val event = awaitPointerEvent()
+                        val activeChanges = event.changes.filter { it.pressed }
+                        val activeCount = activeChanges.size
 
-                        val firstDown = downEvent.changes.firstOrNull { it.pressed } ?: continue
-                        var maxPointerCount = downEvent.changes.count { it.pressed }
-                        var isPanning = false
-                        var hasMoved = false
-                        val startScreenPos = firstDown.position
-                        val startWorldPos = Offset(
-                            startScreenPos.x - currentPanOffset.x,
-                            startScreenPos.y - currentPanOffset.y
-                        )
-
-                        var lastStampPos: Offset? = null
-
-                        if (maxPointerCount < 3) {
-                            if (currentIsStampTool) {
-                                onTap(startWorldPos)
-                                currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                lastStampPos = startWorldPos
-                            } else {
-                                onDrawStart(startWorldPos)
-                            }
-                        }
-
-                        var lastPanCentroid = if (maxPointerCount >= 3) {
+                        // Switch to pan as soon as the threshold number of fingers
+                        // is on the screen. Cancel any in-progress strokes — stamps
+                        // already placed via onTap stay committed.
+                        if (!isPanning && activeCount >= PAN_FINGER_COUNT) {
                             isPanning = true
-                            onDrawCancel()
-                            val activeChanges = downEvent.changes.filter { it.pressed }
-                            Offset(
+                            if (!currentIsStampTool) {
+                                onDrawCancelAll()
+                            }
+                            pointerStates.clear()
+                            lastPanCentroid = Offset(
                                 activeChanges.map { it.position.x }.average().toFloat(),
                                 activeChanges.map { it.position.y }.average().toFloat()
                             )
+                        }
+
+                        if (isPanning) {
+                            if (activeCount >= 2) {
+                                val centroid = Offset(
+                                    activeChanges.map { it.position.x }.average().toFloat(),
+                                    activeChanges.map { it.position.y }.average().toFloat()
+                                )
+                                lastPanCentroid?.let { onPanDelta(centroid - it) }
+                                lastPanCentroid = centroid
+                            } else {
+                                // Fewer than 2 fingers — pause panning until either
+                                // more fingers return or all are released.
+                                lastPanCentroid = null
+                            }
                         } else {
-                            Offset.Zero
-                        }
-
-                        firstDown.consume()
-
-                        var gestureEnded = false
-                        while (!gestureEnded) {
-                            val event = awaitPointerEvent()
-                            val activeChanges = event.changes.filter { it.pressed }
-                            val currentPointerCount = activeChanges.size
-                            maxPointerCount = maxOf(maxPointerCount, currentPointerCount)
-
-                            if (maxPointerCount >= 3 && !isPanning) {
-                                isPanning = true
-                                onDrawCancel()
-                                if (currentPointerCount >= 2) {
-                                    lastPanCentroid = Offset(
-                                        activeChanges.map { it.position.x }.average().toFloat(),
-                                        activeChanges.map { it.position.y }.average().toFloat()
-                                    )
-                                }
-                            }
-
-                            when {
-                                currentPointerCount == 0 -> {
-                                    if (!isPanning && !currentIsStampTool) {
-                                        if (!hasMoved) {
-                                            onDrawCancel()
-                                            onTap(startWorldPos)
-                                        } else {
-                                            onDrawEnd()
-                                        }
-                                    }
-                                    gestureEnded = true
-                                }
-                                isPanning && currentPointerCount >= 2 -> {
-                                    val centroid = Offset(
-                                        activeChanges.map { it.position.x }.average().toFloat(),
-                                        activeChanges.map { it.position.y }.average().toFloat()
-                                    )
-                                    if (lastPanCentroid != Offset.Zero) {
-                                        onPanDelta(centroid - lastPanCentroid)
-                                    }
-                                    lastPanCentroid = centroid
-                                }
-                                !isPanning && currentPointerCount >= 1 -> {
-                                    val pos = activeChanges.first().position
+                            // Newly-pressed pointers: start a stroke or place a stamp.
+                            for (change in event.changes) {
+                                if (!change.previousPressed && change.pressed) {
                                     val worldPos = Offset(
-                                        pos.x - currentPanOffset.x,
-                                        pos.y - currentPanOffset.y
+                                        change.position.x - currentPanOffset.x,
+                                        change.position.y - currentPanOffset.y
                                     )
+                                    val state = PointerGestureState(change.position)
+                                    pointerStates[change.id] = state
                                     if (currentIsStampTool) {
-                                        val last = lastStampPos
-                                        if (last != null) {
-                                            val distance = (worldPos - last).getDistance()
-                                            if (distance >= currentStampMinDistance) {
-                                                onTap(worldPos)
-                                                currentHaptic.performHapticFeedback(
-                                                    HapticFeedbackType.TextHandleMove
-                                                )
-                                                lastStampPos = worldPos
-                                            }
-                                        }
+                                        onTap(worldPos)
+                                        currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        state.lastStampPos = worldPos
                                     } else {
-                                        val dx = pos.x - startScreenPos.x
-                                        val dy = pos.y - startScreenPos.y
-                                        if (dx * dx + dy * dy > 64f) {
-                                            hasMoved = true
-                                        }
-                                        onDrawMove(worldPos)
+                                        onDrawStart(change.id.value, worldPos)
                                     }
                                 }
                             }
-                            event.changes.forEach { it.consume() }
+
+                            // Active pointers: extend stroke or sprinkle stamps.
+                            for (change in event.changes) {
+                                if (!change.pressed || !change.previousPressed) continue
+                                val state = pointerStates[change.id] ?: continue
+                                val worldPos = Offset(
+                                    change.position.x - currentPanOffset.x,
+                                    change.position.y - currentPanOffset.y
+                                )
+                                if (currentIsStampTool) {
+                                    val last = state.lastStampPos
+                                    if (last != null) {
+                                        val distance = (worldPos - last).getDistance()
+                                        if (distance >= currentStampMinDistance) {
+                                            onTap(worldPos)
+                                            currentHaptic.performHapticFeedback(
+                                                HapticFeedbackType.TextHandleMove
+                                            )
+                                            state.lastStampPos = worldPos
+                                        }
+                                    }
+                                } else {
+                                    val dx = change.position.x - state.startScreenPos.x
+                                    val dy = change.position.y - state.startScreenPos.y
+                                    if (dx * dx + dy * dy > 64f) {
+                                        state.hasMoved = true
+                                    }
+                                    onDrawMove(change.id.value, worldPos)
+                                }
+                            }
+
+                            // Released pointers: commit the stroke, or emit a dot
+                            // if the finger never moved (brush/eraser only).
+                            for (change in event.changes) {
+                                if (!change.previousPressed || change.pressed) continue
+                                val state = pointerStates.remove(change.id) ?: continue
+                                if (!currentIsStampTool) {
+                                    if (!state.hasMoved) {
+                                        onDrawCancel(change.id.value)
+                                        val worldPos = Offset(
+                                            state.startScreenPos.x - currentPanOffset.x,
+                                            state.startScreenPos.y - currentPanOffset.y
+                                        )
+                                        onTap(worldPos)
+                                    } else {
+                                        onDrawEnd(change.id.value)
+                                    }
+                                }
+                            }
                         }
+
+                        // Once every finger is gone, reset for the next gesture.
+                        if (activeCount == 0) {
+                            pointerStates.clear()
+                            isPanning = false
+                            lastPanCentroid = null
+                        }
+
+                        event.changes.forEach { it.consume() }
                     }
                 }
             }
@@ -240,22 +254,25 @@ fun DrawingCanvas(
                 }
             }
 
-            if (currentStrokePoints.size >= 2) {
-                drawPath(
-                    path = smoothedStrokePath(currentStrokePoints),
-                    color = if (isEraser) Color.White else currentColor,
-                    style = Stroke(
-                        width = currentThickness,
-                        cap = StrokeCap.Round,
-                        join = StrokeJoin.Round
+            val liveColor = if (isEraser) Color.White else currentColor
+            for (points in currentStrokes.values) {
+                if (points.size >= 2) {
+                    drawPath(
+                        path = smoothedStrokePath(points),
+                        color = liveColor,
+                        style = Stroke(
+                            width = currentThickness,
+                            cap = StrokeCap.Round,
+                            join = StrokeJoin.Round
+                        )
                     )
-                )
-            } else if (currentStrokePoints.size == 1) {
-                drawCircle(
-                    color = if (isEraser) Color.White else currentColor,
-                    radius = currentThickness / 2f,
-                    center = currentStrokePoints[0]
-                )
+                } else if (points.size == 1) {
+                    drawCircle(
+                        color = liveColor,
+                        radius = currentThickness / 2f,
+                        center = points[0]
+                    )
+                }
             }
         }
     }

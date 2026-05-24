@@ -7,7 +7,7 @@
 ## 🚀 Get it now
 
 - 🌐 **[Play it in your browser](https://yukuku.github.io/gambar-aja-kok-repot/)** — no install, just draw.
-- 📱 **[Download the latest Android APK (v4.0.2)](https://github.com/yukuku/gambar-aja-kok-repot/releases/latest)** — Android 10+.
+- 📱 **[Download the latest Android APK (v4.1.0)](https://github.com/yukuku/gambar-aja-kok-repot/releases/latest)** — Android 10+.
 
 ---
 
@@ -35,7 +35,8 @@ So you go to the Play Store. You search "drawing app for kids." And what do you 
 - ⭐ **Stamps!** Hearts, stars, spirals, smiley faces, and squares — because sometimes you just want to SMASH a giant heart onto the screen.
 - 🧹 **An eraser.** For when the masterpiece needs... editorial revision.
 - ↩️ **Undo & Redo.** Because even Picasso made mistakes (probably).
-- 🤏 **3-finger pan.** The canvas is infinite. Let them explore.
+- 👥 **2-3 fingers can draw at the same time.** Siblings, twins, friends — paint together on one screen, no taking turns.
+- 🤏 **4-finger pan.** The canvas is infinite. Let them explore.
 
 ### What you DON'T get:
 
