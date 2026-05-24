@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.1.0] - 2026-05-24
+
+### Added
+- **Two or three toddlers can now draw at the same time on one screen.** Each finger gets its own independent stroke, so siblings sharing a tablet no longer have to take turns or fight over the screen — up to 3 fingers can paint simultaneously, in the currently selected color and brush thickness. Stamps also sprinkle independently per finger.
+
+### Changed
+- **Pan now requires 4 fingers** (was 3), to free up 3-finger gestures for simultaneous drawing. The infinite canvas still pans the same way — just one more finger.
+
 ## [4.0.2] - 2026-04-23
 
 ### Added

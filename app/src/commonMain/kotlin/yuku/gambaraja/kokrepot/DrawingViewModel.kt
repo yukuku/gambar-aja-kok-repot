@@ -2,6 +2,7 @@ package yuku.gambaraja.kokrepot
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.geometry.Offset
@@ -46,8 +47,10 @@ class DrawingViewModel(private val storage: DrawingStorage) {
     var canRedo by mutableStateOf(false)
         private set
 
-    var currentStrokePoints by mutableStateOf<List<Offset>>(emptyList())
-        private set
+    // In-progress strokes keyed by pointer id, so 2-3 fingers can draw their own
+    // strokes simultaneously (one app, multiple toddlers on the same screen).
+    private val _currentStrokes = mutableStateMapOf<Long, List<Offset>>()
+    val currentStrokes: Map<Long, List<Offset>> get() = _currentStrokes
 
     private val _actions = mutableStateListOf<DrawingAction>()
     val actions: List<DrawingAction> get() = _actions
@@ -87,16 +90,17 @@ class DrawingViewModel(private val storage: DrawingStorage) {
         }
     }
 
-    fun onDrawStart(worldPoint: Offset) {
-        currentStrokePoints = listOf(worldPoint)
+    fun onDrawStart(pointerId: Long, worldPoint: Offset) {
+        _currentStrokes[pointerId] = listOf(worldPoint)
     }
 
-    fun onDrawMove(worldPoint: Offset) {
-        currentStrokePoints = currentStrokePoints + worldPoint
+    fun onDrawMove(pointerId: Long, worldPoint: Offset) {
+        val current = _currentStrokes[pointerId] ?: return
+        _currentStrokes[pointerId] = current + worldPoint
     }
 
-    fun onDrawEnd() {
-        val points = currentStrokePoints
+    fun onDrawEnd(pointerId: Long) {
+        val points = _currentStrokes.remove(pointerId) ?: return
         if (points.isEmpty()) return
 
         val isEraser = selectedTool == Tool.ERASER
@@ -110,13 +114,16 @@ class DrawingViewModel(private val storage: DrawingStorage) {
         )
         _actions.add(stroke)
         _redoStack.clear()
-        currentStrokePoints = emptyList()
         updateUndoRedo()
         scheduleAutoSave()
     }
 
-    fun onDrawCancel() {
-        currentStrokePoints = emptyList()
+    fun onDrawCancel(pointerId: Long) {
+        _currentStrokes.remove(pointerId)
+    }
+
+    fun onDrawCancelAll() {
+        _currentStrokes.clear()
     }
 
     fun onTap(worldPoint: Offset) {
