@@ -70,14 +70,14 @@ class DrawingViewModel(private val storage: DrawingStorage) {
 
     fun selectColor(color: Color) {
         selectedColor = color
-        if (selectedTool == Tool.ERASER || selectedTool.isStamp || selectedTool == Tool.FLOOD_FILL) {
+        if (selectedTool == Tool.ERASER || selectedTool.isStamp) {
             selectedTool = Tool.BRUSH
         }
     }
 
     fun selectThickness(thickness: Float) {
         selectedThickness = thickness
-        if (selectedTool.isStamp || selectedTool == Tool.FLOOD_FILL) {
+        if (selectedTool.isStamp) {
             selectedTool = Tool.BRUSH
         }
     }
@@ -160,6 +160,16 @@ class DrawingViewModel(private val storage: DrawingStorage) {
         _redoStack.clear()
         updateUndoRedo()
         scheduleAutoSave()
+    }
+
+    /** Retroactively undoes a just-committed fill, e.g. when a 3-finger pan
+     * gesture interrupts a multi-finger flood-fill tap before it's had a
+     * chance to render — as if that fill had never happened. */
+    fun removeFillAction(fill: DrawingAction.Fill) {
+        if (_actions.remove(fill)) {
+            updateUndoRedo()
+            scheduleAutoSave()
+        }
     }
 
     fun onPanDelta(delta: Offset) {

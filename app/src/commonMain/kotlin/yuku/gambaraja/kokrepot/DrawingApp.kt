@@ -70,6 +70,7 @@ fun DrawingApp(viewModel: DrawingViewModel) {
             onTap = { viewModel.onTap(it) },
             onPanDelta = { viewModel.onPanDelta(it) },
             onFloodFill = { viewModel.addFillAction(it) },
+            onFloodFillCancel = { viewModel.removeFillAction(it) },
             modifier = Modifier.fillMaxSize()
         )
 
