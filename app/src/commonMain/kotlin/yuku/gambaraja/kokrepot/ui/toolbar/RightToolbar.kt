@@ -85,7 +85,7 @@ fun RightToolbar(
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         thicknesses.forEach { thickness ->
-            val isSelected = thickness == selectedThickness && !isStampMode
+            val isSelected = thickness == selectedThickness && !isStampMode && selectedTool != Tool.FLOOD_FILL
             AnimatedToolButton(
                 isSelected = isSelected,
                 onClick = { onThicknessSelected(thickness) }
