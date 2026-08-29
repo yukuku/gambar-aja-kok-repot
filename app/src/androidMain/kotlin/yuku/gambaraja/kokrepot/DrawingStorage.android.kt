@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.model.FillSpan
 import yuku.gambaraja.kokrepot.model.StampType
 import java.io.DataInputStream
 import java.io.DataOutputStream
@@ -18,9 +19,10 @@ import java.io.File
  *   panX, panY: float
  *   count:    int
  *   actions:  repeated
- *     type: byte (0 = stroke, 1 = stamp)
+ *     type: byte (0 = stroke, 1 = stamp, 2 = fill)
  *     stroke: color:int, thickness:float, isEraser:byte, pointCount:int, points:(float x, float y)*
  *     stamp: cx:float, cy:float, stampType:byte, color:int, size:float
+ *     fill: originX:float, originY:float, width:int, height:int, color:int, spanCount:int, spans:(row:int, x0:int, x1:int)*
  */
 actual class DrawingStorage(private val context: Context) {
 
@@ -34,6 +36,7 @@ actual class DrawingStorage(private val context: Context) {
         const val FORMAT_VERSION = 1
         const val TYPE_STROKE: Byte = 0
         const val TYPE_STAMP: Byte = 1
+        const val TYPE_FILL: Byte = 2
     }
 
     private val file: File get() = File(context.filesDir, FILE_NAME)
@@ -111,6 +114,35 @@ actual class DrawingStorage(private val context: Context) {
                                 )
                             )
                         }
+                        TYPE_FILL -> {
+                            val originX = input.readFloat()
+                            val originY = input.readFloat()
+                            val fillWidth = input.readInt()
+                            val fillHeight = input.readInt()
+                            val color = input.readInt()
+                            val spanCount = input.readInt()
+                            if (spanCount < 0 || spanCount > 10_000_000) {
+                                Log.w(TAG, "Suspicious span count: $spanCount")
+                                return@use null
+                            }
+                            val spans = ArrayList<FillSpan>(spanCount)
+                            for (s in 0 until spanCount) {
+                                val row = input.readInt()
+                                val x0 = input.readInt()
+                                val x1 = input.readInt()
+                                spans.add(FillSpan(row, x0, x1))
+                            }
+                            actions.add(
+                                DrawingAction.Fill(
+                                    originX = originX,
+                                    originY = originY,
+                                    width = fillWidth,
+                                    height = fillHeight,
+                                    color = color,
+                                    spans = spans,
+                                )
+                            )
+                        }
                         else -> {
                             Log.w(TAG, "Unknown action type: $type")
                             return@use null
@@ -157,6 +189,20 @@ actual class DrawingStorage(private val context: Context) {
                             out.writeByte(action.stampType.ordinal)
                             out.writeInt(action.color)
                             out.writeFloat(action.size)
+                        }
+                        is DrawingAction.Fill -> {
+                            out.writeByte(TYPE_FILL.toInt())
+                            out.writeFloat(action.originX)
+                            out.writeFloat(action.originY)
+                            out.writeInt(action.width)
+                            out.writeInt(action.height)
+                            out.writeInt(action.color)
+                            out.writeInt(action.spans.size)
+                            for (span in action.spans) {
+                                out.writeInt(span.row)
+                                out.writeInt(span.x0)
+                                out.writeInt(span.x1)
+                            }
                         }
                     }
                 }

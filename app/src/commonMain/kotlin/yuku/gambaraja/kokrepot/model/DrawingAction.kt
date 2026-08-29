@@ -2,6 +2,10 @@ package yuku.gambaraja.kokrepot.model
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.Path
+
+/** One contiguous horizontal run of filled pixels, relative to [DrawingAction.Fill]'s origin. */
+data class FillSpan(val row: Int, val x0: Int, val x1: Int)
 
 sealed class DrawingAction {
     abstract val bounds: Rect
@@ -42,6 +46,40 @@ sealed class DrawingAction {
                 center.x + size,
                 center.y + size
             )
+        }
+    }
+
+    /**
+     * A flood-filled (paint bucket) region, produced by rasterizing the visible
+     * viewport and running a scanline flood fill from the tap point. [spans] are
+     * the filled pixel runs, one world unit == one pixel, relative to
+     * ([originX], [originY]).
+     */
+    data class Fill(
+        val originX: Float,
+        val originY: Float,
+        val width: Int,
+        val height: Int,
+        val color: Int,
+        val spans: List<FillSpan>
+    ) : DrawingAction() {
+        override val bounds: Rect by lazy {
+            Rect(originX, originY, originX + width, originY + height)
+        }
+
+        val path: Path by lazy {
+            Path().apply {
+                for (span in spans) {
+                    addRect(
+                        Rect(
+                            originX + span.x0,
+                            originY + span.row,
+                            originX + span.x1 + 1f,
+                            originY + span.row + 1f
+                        )
+                    )
+                }
+            }
         }
     }
 }

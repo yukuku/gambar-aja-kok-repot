@@ -81,10 +81,11 @@ app/src/
 │   ├── DrawingViewModel.kt      # State: actions list, undo/redo, tool/color/thickness, pan offset
 │   ├── DrawingStorage.kt        # `expect class DrawingStorage` (load/save DrawingSnapshot)
 │   ├── model/
-│   │   ├── DrawingAction.kt     # Sealed class: Stroke (points+color+thickness) and Stamp (center+type+color+size)
-│   │   └── Enums.kt             # Tool enum (BRUSH, ERASER, STAMP_*), StampType enum
+│   │   ├── DrawingAction.kt     # Sealed class: Stroke (points+color+thickness), Stamp (center+type+color+size), Fill (origin+width+height+color+spans)
+│   │   └── Enums.kt             # Tool enum (BRUSH, ERASER, FLOOD_FILL, STAMP_*), StampType enum
 │   ├── ui/
-│   │   ├── canvas/DrawingCanvas.kt    # Compose Canvas: viewport culling, touch handling (1-3 finger simultaneous draw, 4-finger pan)
+│   │   ├── canvas/DrawingCanvas.kt    # Compose Canvas: viewport culling, touch handling (1-2 finger simultaneous draw, 3-finger pan)
+│   │   ├── canvas/FloodFill.kt        # Rasterizes the viewport and runs a scanline flood fill from the tap point
 │   │   └── toolbar/{LeftToolbar,RightToolbar,ToolbarCommon}.kt
 │   └── stamp/StampRenderer.kt   # DrawScope extensions: drawHeart, drawStar, drawSpiral, drawSmiley, drawSquare
 ├── androidMain/
@@ -104,7 +105,7 @@ app/src/
 
 **Stroke-based infinite canvas** — no bitmap stored in RAM.
 
-- All drawing is stored as a `List<DrawingAction>` (strokes and stamps)
+- All drawing is stored as a `List<DrawingAction>` (strokes, stamps, and flood fills)
 - Each action has a lazily-computed bounding `Rect`
 - Rendering: only actions whose bounds overlap the current viewport are drawn
 - Canvas is truly infinite — panning changes a viewport offset, drawing coordinates are in world space
@@ -112,9 +113,10 @@ app/src/
 
 ### Touch handling (in DrawingCanvas.kt)
 
-- **1-3 fingers**: each finger draws its own independent stroke (or sprinkles its own stamps) — so 2-3 toddlers can paint on the same screen at once. In-progress strokes are stored in `DrawingViewModel.currentStrokes`, keyed by `PointerId.value`.
-- **4 fingers**: pan — once 4 pointers are on screen, the gesture locks into pan mode and cancels every in-progress stroke (stamps already committed via `onTap` stay)
+- **1-2 fingers**: each finger draws its own independent stroke (or sprinkles its own stamps, or flood-fills on tap) — so 2 toddlers can paint on the same screen at once. In-progress strokes are stored in `DrawingViewModel.currentStrokes`, keyed by `PointerId.value`.
+- **3 fingers**: pan — once 3 pointers are on screen, the gesture locks into pan mode and cancels every in-progress stroke (stamps already committed via `onTap` stay)
 - Coordinate conversion: `worldPos = screenPos - panOffset`
+- **Flood fill**: fires once on touch-down (dragging the same finger doesn't repeat it). See "Flood fill" under Architecture below.
 
 ## UI Layout
 
@@ -124,10 +126,12 @@ app/src/
 | Toolbar  |        Drawing Canvas           | Toolbar  |
 |          |       (white background)        |          |
 | 12 color |                                 | 5 thick  |
-| circles  |    1-3 fingers: draw/stamp      | -------- |
-|          |    4-finger: pan                | 5 stamps |
+| circles  |    1-2 fingers: draw/stamp/fill | -------- |
+|          |    3-finger: pan                | Flood fill|
 | -------- |                                 | -------- |
-| Eraser   |                                 | Undo     |
+| Eraser   |                                 | 5 stamps |
+|          |                                 | -------- |
+|          |                                 | Undo     |
 |          |                                 | Redo     |
 +----------+---------------------------------+----------+
 ```
@@ -136,7 +140,11 @@ app/src/
 12 predefined colors: Red, Orange, Yellow, Lime Green, Green, Sky Blue, Blue, Purple, Hot Pink, Brown, Black, Gray. Selected color shows highlighted border + slight scale. Eraser button at bottom (paints white).
 
 ### Right toolbar
-5 brush thicknesses (4, 8, 14, 22, 32). Then 5 stamp types: Heart, Star, Spiral, Smiley, Square. Then Undo and Redo at the bottom. Stamp size = thickness * 2.5.
+5 brush thicknesses (4, 8, 14, 22, 32). Then a flood fill (paint bucket) tool. Then 5 stamp types: Heart, Star, Spiral, Smiley, Square. Then Undo and Redo at the bottom. Stamp size = thickness * 2.5.
+
+### Flood fill
+
+Tapping the canvas with the flood fill tool selected rasterizes the currently visible viewport (one world unit == one pixel, matching how `DrawingCanvas` itself renders — see the shared `drawAction` function), then runs a stack-based scanline flood fill from the tap point and packs the result into a `DrawingAction.Fill` (row-run-length-encoded spans, so a large open fill stays compact). Since a truly infinite canvas has no natural boundary to fill against, the fill is scoped to what's currently on screen — panning out and tapping again fills further.
 
 ## Web deployment
 

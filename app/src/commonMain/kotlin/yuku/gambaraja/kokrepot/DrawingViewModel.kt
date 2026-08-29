@@ -70,20 +70,20 @@ class DrawingViewModel(private val storage: DrawingStorage) {
 
     fun selectColor(color: Color) {
         selectedColor = color
-        if (selectedTool == Tool.ERASER || selectedTool.isStamp) {
+        if (selectedTool == Tool.ERASER || selectedTool.isStamp || selectedTool == Tool.FLOOD_FILL) {
             selectedTool = Tool.BRUSH
         }
     }
 
     fun selectThickness(thickness: Float) {
         selectedThickness = thickness
-        if (selectedTool.isStamp) {
+        if (selectedTool.isStamp || selectedTool == Tool.FLOOD_FILL) {
             selectedTool = Tool.BRUSH
         }
     }
 
     fun selectTool(tool: Tool) {
-        if (tool == selectedTool && tool.isStamp) {
+        if (tool == selectedTool && (tool.isStamp || tool == Tool.FLOOD_FILL)) {
             selectedTool = Tool.BRUSH
         } else {
             selectedTool = tool
@@ -152,6 +152,13 @@ class DrawingViewModel(private val storage: DrawingStorage) {
             _redoStack.clear()
             updateUndoRedo()
         }
+        scheduleAutoSave()
+    }
+
+    fun addFillAction(fill: DrawingAction.Fill) {
+        _actions.add(fill)
+        _redoStack.clear()
+        updateUndoRedo()
         scheduleAutoSave()
     }
 
