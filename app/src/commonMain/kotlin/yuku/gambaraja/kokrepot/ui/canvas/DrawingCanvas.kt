@@ -55,6 +55,7 @@ private class PointerGestureState(
     val startScreenPos: Offset,
     var hasMoved: Boolean = false,
     var lastStampPos: Offset? = null,
+    var committedFill: DrawingAction.Fill? = null,
 )
 
 private const val PAN_FINGER_COUNT = 3
@@ -118,6 +119,7 @@ fun DrawingCanvas(
     onTap: (Offset) -> Unit,
     onPanDelta: (Offset) -> Unit,
     onFloodFill: (DrawingAction.Fill) -> Unit,
+    onFloodFillCancel: (DrawingAction.Fill) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currentPanOffset by rememberUpdatedState(panOffset)
@@ -126,6 +128,7 @@ fun DrawingCanvas(
     val currentActions by rememberUpdatedState(actions)
     val currentFillColor by rememberUpdatedState(currentColor)
     val currentOnFloodFill by rememberUpdatedState(onFloodFill)
+    val currentOnFloodFillCancel by rememberUpdatedState(onFloodFillCancel)
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
     val stampMinDistance = remember(stampSize, density) {
@@ -157,6 +160,9 @@ fun DrawingCanvas(
                             isPanning = true
                             if (!currentIsStampTool) {
                                 onDrawCancelAll()
+                            }
+                            for (state in pointerStates.values) {
+                                state.committedFill?.let { currentOnFloodFillCancel(it) }
                             }
                             pointerStates.clear()
                             lastPanCentroid = Offset(
@@ -208,6 +214,7 @@ fun DrawingCanvas(
                                         if (fill != null) {
                                             currentOnFloodFill(fill)
                                             currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            state.committedFill = fill
                                         }
                                     } else {
                                         onDrawStart(change.id.value, worldPos)
