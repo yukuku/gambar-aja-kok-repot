@@ -142,13 +142,28 @@ fun DrawingCanvas(
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     val pointerStates = mutableMapOf<PointerId, PointerGestureState>()
+                    // Our own running view of which pointers are currently down and
+                    // where, rather than trusting that a given PointerEvent's
+                    // `changes` lists every currently-pressed pointer: on the web
+                    // target, when several fingers land within the same frame, an
+                    // event can report only the pointer(s) that changed in that
+                    // specific tick, which would otherwise undercount fingers that
+                    // landed moments earlier and cause the pan threshold to be
+                    // missed.
+                    val pointerPositions = mutableMapOf<PointerId, Offset>()
                     var isPanning = false
                     var lastPanCentroid: Offset? = null
 
                     while (true) {
                         val event = awaitPointerEvent()
-                        val activeChanges = event.changes.filter { it.pressed }
-                        val activeCount = activeChanges.size
+                        for (change in event.changes) {
+                            if (change.pressed) {
+                                pointerPositions[change.id] = change.position
+                            } else {
+                                pointerPositions.remove(change.id)
+                            }
+                        }
+                        val activeCount = pointerPositions.size
 
                         // Switch to pan as soon as the threshold number of fingers
                         // is on the screen. Cancel any in-progress strokes — stamps
@@ -160,16 +175,16 @@ fun DrawingCanvas(
                             }
                             pointerStates.clear()
                             lastPanCentroid = Offset(
-                                activeChanges.map { it.position.x }.average().toFloat(),
-                                activeChanges.map { it.position.y }.average().toFloat()
+                                pointerPositions.values.map { it.x }.average().toFloat(),
+                                pointerPositions.values.map { it.y }.average().toFloat()
                             )
                         }
 
                         if (isPanning) {
                             if (activeCount >= 2) {
                                 val centroid = Offset(
-                                    activeChanges.map { it.position.x }.average().toFloat(),
-                                    activeChanges.map { it.position.y }.average().toFloat()
+                                    pointerPositions.values.map { it.x }.average().toFloat(),
+                                    pointerPositions.values.map { it.y }.average().toFloat()
                                 )
                                 lastPanCentroid?.let { onPanDelta(centroid - it) }
                                 lastPanCentroid = centroid
@@ -271,6 +286,7 @@ fun DrawingCanvas(
                         // Once every finger is gone, reset for the next gesture.
                         if (activeCount == 0) {
                             pointerStates.clear()
+                            pointerPositions.clear()
                             isPanning = false
                             lastPanCentroid = null
                         }
