@@ -3,6 +3,7 @@ package yuku.gambaraja.kokrepot
 import androidx.compose.ui.geometry.Offset
 import kotlinx.browser.localStorage
 import yuku.gambaraja.kokrepot.model.DrawingAction
+import yuku.gambaraja.kokrepot.model.FillSpan
 import yuku.gambaraja.kokrepot.model.StampType
 
 /**
@@ -84,6 +85,39 @@ actual class DrawingStorage {
                             )
                         )
                     }
+                    "f" -> {
+                        // f <originX> <originY> <width> <height> <color> <spanCount> <row1> <x0_1> <x1_1> ...
+                        val originX = parts[1].toFloat()
+                        val originY = parts[2].toFloat()
+                        val fillWidth = parts[3].toInt()
+                        val fillHeight = parts[4].toInt()
+                        val color = parts[5].toInt()
+                        val spanCount = parts[6].toInt()
+                        if (spanCount < 0 || spanCount > 10_000_000) return null
+                        val spans = ArrayList<FillSpan>(spanCount)
+                        var k = 7
+                        repeat(spanCount) {
+                            if (k + 2 >= parts.size) return null
+                            spans.add(
+                                FillSpan(
+                                    row = parts[k].toInt(),
+                                    x0 = parts[k + 1].toInt(),
+                                    x1 = parts[k + 2].toInt(),
+                                )
+                            )
+                            k += 3
+                        }
+                        actions.add(
+                            DrawingAction.Fill(
+                                originX = originX,
+                                originY = originY,
+                                width = fillWidth,
+                                height = fillHeight,
+                                color = color,
+                                spans = spans,
+                            )
+                        )
+                    }
                     else -> return null
                 }
             }
@@ -121,6 +155,21 @@ actual class DrawingStorage {
                             .append(action.stampType.ordinal).append(' ')
                             .append(action.color).append(' ')
                             .append(action.size).append('\n')
+                    }
+                    is DrawingAction.Fill -> {
+                        sb.append("f ")
+                            .append(action.originX).append(' ')
+                            .append(action.originY).append(' ')
+                            .append(action.width).append(' ')
+                            .append(action.height).append(' ')
+                            .append(action.color).append(' ')
+                            .append(action.spans.size)
+                        for (span in action.spans) {
+                            sb.append(' ').append(span.row)
+                                .append(' ').append(span.x0)
+                                .append(' ').append(span.x1)
+                        }
+                        sb.append('\n')
                     }
                 }
             }

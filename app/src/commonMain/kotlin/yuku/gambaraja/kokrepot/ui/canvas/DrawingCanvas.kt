@@ -4,8 +4,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -13,13 +15,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import yuku.gambaraja.kokrepot.model.DrawingAction
 import yuku.gambaraja.kokrepot.stamp.drawStamp
@@ -52,7 +57,47 @@ private class PointerGestureState(
     var lastStampPos: Offset? = null,
 )
 
-private const val PAN_FINGER_COUNT = 4
+private const val PAN_FINGER_COUNT = 3
+
+/**
+ * Draws a single committed [DrawingAction]. Shared between the on-screen render
+ * loop and the offscreen rasterizer used by flood fill, so both see identical
+ * pixels.
+ */
+internal fun DrawScope.drawAction(action: DrawingAction) {
+    when (action) {
+        is DrawingAction.Stroke -> {
+            if (action.points.size >= 2) {
+                drawPath(
+                    path = smoothedStrokePath(action.points),
+                    color = if (action.isEraser) Color.White else Color(action.color),
+                    style = Stroke(
+                        width = action.thickness,
+                        cap = StrokeCap.Round,
+                        join = StrokeJoin.Round
+                    )
+                )
+            } else if (action.points.size == 1) {
+                drawCircle(
+                    color = if (action.isEraser) Color.White else Color(action.color),
+                    radius = action.thickness / 2f,
+                    center = action.points[0]
+                )
+            }
+        }
+        is DrawingAction.Stamp -> {
+            drawStamp(
+                center = action.center,
+                stampType = action.stampType,
+                color = Color(action.color),
+                size = action.size
+            )
+        }
+        is DrawingAction.Fill -> {
+            drawPath(path = action.path, color = Color(action.color))
+        }
+    }
+}
 
 @Composable
 fun DrawingCanvas(
@@ -63,6 +108,7 @@ fun DrawingCanvas(
     currentThickness: Float,
     isEraser: Boolean,
     isStampTool: Boolean,
+    isFloodFillTool: Boolean,
     stampSize: Float,
     onDrawStart: (Long, Offset) -> Unit,
     onDrawMove: (Long, Offset) -> Unit,
@@ -71,10 +117,16 @@ fun DrawingCanvas(
     onDrawCancelAll: () -> Unit,
     onTap: (Offset) -> Unit,
     onPanDelta: (Offset) -> Unit,
+    onFloodFill: (DrawingAction.Fill) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val currentPanOffset by rememberUpdatedState(panOffset)
     val currentIsStampTool by rememberUpdatedState(isStampTool)
+    val currentIsFloodFillTool by rememberUpdatedState(isFloodFillTool)
+    val currentActions by rememberUpdatedState(actions)
+    val currentFillColor by rememberUpdatedState(currentColor)
+    val currentOnFloodFill by rememberUpdatedState(onFloodFill)
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
     val stampMinDistance = remember(stampSize, density) {
         stampSize * 2 + with(density) { 10.dp.toPx() }
@@ -86,6 +138,7 @@ fun DrawingCanvas(
     Canvas(
         modifier = modifier
             .fillMaxSize()
+            .onSizeChanged { canvasSize = it }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
                     val pointerStates = mutableMapOf<PointerId, PointerGestureState>()
@@ -139,6 +192,23 @@ fun DrawingCanvas(
                                         onTap(worldPos)
                                         currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         state.lastStampPos = worldPos
+                                    } else if (currentIsFloodFillTool) {
+                                        val viewportWorldRect = Rect(
+                                            left = -currentPanOffset.x,
+                                            top = -currentPanOffset.y,
+                                            right = -currentPanOffset.x + canvasSize.width,
+                                            bottom = -currentPanOffset.y + canvasSize.height
+                                        )
+                                        val fill = computeFloodFill(
+                                            actions = currentActions,
+                                            viewportWorldRect = viewportWorldRect,
+                                            startWorldPos = worldPos,
+                                            fillColor = currentFillColor,
+                                        )
+                                        if (fill != null) {
+                                            currentOnFloodFill(fill)
+                                            currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        }
                                     } else {
                                         onDrawStart(change.id.value, worldPos)
                                     }
@@ -165,6 +235,9 @@ fun DrawingCanvas(
                                             state.lastStampPos = worldPos
                                         }
                                     }
+                                } else if (currentIsFloodFillTool) {
+                                    // Flood fill fires once on touch-down; dragging
+                                    // the same finger doesn't repeat it.
                                 } else {
                                     val dx = change.position.x - state.startScreenPos.x
                                     val dy = change.position.y - state.startScreenPos.y
@@ -180,7 +253,7 @@ fun DrawingCanvas(
                             for (change in event.changes) {
                                 if (!change.previousPressed || change.pressed) continue
                                 val state = pointerStates.remove(change.id) ?: continue
-                                if (!currentIsStampTool) {
+                                if (!currentIsStampTool && !currentIsFloodFillTool) {
                                     if (!state.hasMoved) {
                                         onDrawCancel(change.id.value)
                                         val worldPos = Offset(
@@ -222,36 +295,7 @@ fun DrawingCanvas(
         translate(left = panOffset.x, top = panOffset.y) {
             for (action in actions) {
                 if (!action.bounds.overlaps(viewportRect)) continue
-
-                when (action) {
-                    is DrawingAction.Stroke -> {
-                        if (action.points.size >= 2) {
-                            drawPath(
-                                path = smoothedStrokePath(action.points),
-                                color = if (action.isEraser) Color.White else Color(action.color),
-                                style = Stroke(
-                                    width = action.thickness,
-                                    cap = StrokeCap.Round,
-                                    join = StrokeJoin.Round
-                                )
-                            )
-                        } else if (action.points.size == 1) {
-                            drawCircle(
-                                color = if (action.isEraser) Color.White else Color(action.color),
-                                radius = action.thickness / 2f,
-                                center = action.points[0]
-                            )
-                        }
-                    }
-                    is DrawingAction.Stamp -> {
-                        drawStamp(
-                            center = action.center,
-                            stampType = action.stampType,
-                            color = Color(action.color),
-                            size = action.size
-                        )
-                    }
-                }
+                drawAction(action)
             }
 
             val liveColor = if (isEraser) Color.White else currentColor

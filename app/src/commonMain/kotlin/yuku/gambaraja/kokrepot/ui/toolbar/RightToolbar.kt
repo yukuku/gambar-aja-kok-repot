@@ -27,6 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
@@ -99,6 +101,24 @@ fun RightToolbar(
             }
         }
 
+        Spacer(modifier = Modifier.height(4.dp))
+        HorizontalDivider(
+            modifier = Modifier.padding(horizontal = 8.dp),
+            color = dividerColor
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+
+        AnimatedToolButton(
+            isSelected = selectedTool == Tool.FLOOD_FILL,
+            onClick = { onToolSelected(Tool.FLOOD_FILL) }
+        ) {
+            FloodFillIcon(
+                color = iconColor,
+                borderColor = iconBorderColor,
+                modifier = Modifier.size(26.dp)
+            )
+        }
+
         if (!isEraserSelected) {
             Spacer(modifier = Modifier.height(4.dp))
             HorizontalDivider(
@@ -148,6 +168,31 @@ fun RightToolbar(
                 )
             }
         }
+    }
+}
+
+/** A tilted paint bucket pouring a drop, matching the app's hand-drawn icon style. */
+@Composable
+private fun FloodFillIcon(color: Color, borderColor: Color, modifier: Modifier = Modifier) {
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+        val strokeWidth = (w * 0.09f).coerceAtLeast(1.5f)
+
+        val bucketPath = Path().apply {
+            moveTo(w * 0.12f, h * 0.38f)
+            lineTo(w * 0.72f, h * 0.12f)
+            lineTo(w * 0.95f, h * 0.52f)
+            lineTo(w * 0.42f, h * 0.72f)
+            close()
+        }
+        drawPath(bucketPath, color)
+        drawPath(bucketPath, borderColor, style = Stroke(width = strokeWidth))
+
+        val dropCenter = Offset(w * 0.25f, h * 0.9f)
+        val dropRadius = w * 0.12f
+        drawCircle(color, dropRadius, dropCenter)
+        drawCircle(borderColor, dropRadius, dropCenter, style = Stroke(width = strokeWidth * 0.7f))
     }
 }
 

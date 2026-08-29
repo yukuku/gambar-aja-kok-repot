@@ -1,5 +1,13 @@
 # Changelog
 
+## [4.2.0] - 2026-08-29
+
+### Added
+- **Flood fill.** A new paint-bucket tool in the right toolbar — tap inside a shape and the enclosed area fills with the selected color, coloring-book style. Since the canvas is infinite, the fill is scoped to whatever's currently visible on screen.
+
+### Changed
+- **Pan now requires 3 fingers** (was 4), which also drops simultaneous drawing from 3 fingers to 2. Two toddlers can still paint side by side; the third finger now pans instead.
+
 ## [4.1.0] - 2026-05-24
 
 ### Added

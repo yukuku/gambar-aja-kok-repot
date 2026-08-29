@@ -7,6 +7,7 @@ enum class StampType {
 enum class Tool {
     BRUSH,
     ERASER,
+    FLOOD_FILL,
     STAMP_HEART,
     STAMP_STAR,
     STAMP_SPIRAL,

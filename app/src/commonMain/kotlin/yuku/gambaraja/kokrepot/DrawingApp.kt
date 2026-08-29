@@ -60,6 +60,7 @@ fun DrawingApp(viewModel: DrawingViewModel) {
             currentThickness = viewModel.selectedThickness,
             isEraser = viewModel.selectedTool == Tool.ERASER,
             isStampTool = viewModel.selectedTool.isStamp,
+            isFloodFillTool = viewModel.selectedTool == Tool.FLOOD_FILL,
             stampSize = DrawingViewModel.STAMP_FIXED_SIZE,
             onDrawStart = { id, p -> viewModel.onDrawStart(id, p) },
             onDrawMove = { id, p -> viewModel.onDrawMove(id, p) },
@@ -68,6 +69,7 @@ fun DrawingApp(viewModel: DrawingViewModel) {
             onDrawCancelAll = { viewModel.onDrawCancelAll() },
             onTap = { viewModel.onTap(it) },
             onPanDelta = { viewModel.onPanDelta(it) },
+            onFloodFill = { viewModel.addFillAction(it) },
             modifier = Modifier.fillMaxSize()
         )
 
