@@ -77,7 +77,7 @@ class DrawingViewModel(private val storage: DrawingStorage) {
 
     fun selectThickness(thickness: Float) {
         selectedThickness = thickness
-        if (selectedTool.isStamp) {
+        if (selectedTool.isStamp || selectedTool == Tool.FLOOD_FILL) {
             selectedTool = Tool.BRUSH
         }
     }
