@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -144,171 +145,184 @@ fun DrawingCanvas(
             .onSizeChanged { canvasSize = it }
             .pointerInput(Unit) {
                 awaitPointerEventScope {
-                    val pointerStates = mutableMapOf<PointerId, PointerGestureState>()
-                    // Latest known position of every pointer currently pressed,
-                    // keyed by id — kept current from every event's `changes` for
-                    // the whole gesture (not just while panning). Individual events
-                    // aren't guaranteed to report every still-pressed pointer's
-                    // status: when several fingers land within the same frame, one
-                    // event can report only the finger(s) that changed in that
-                    // specific tick. Counting fingers from a single event's
-                    // `changes` alone can therefore undercount fingers that landed
-                    // moments earlier — missing the pan threshold entirely, or
-                    // (during an active pan) averaging in stale positions and
-                    // making the centroid jump. Accumulating instead fixes both.
-                    //
-                    // Scoped to a single gesture: cleared whenever every pointer is
-                    // up. That reset is driven by a fresh per-event count (below),
-                    // never by this map's own size, so a release this map happens
-                    // to miss can't leave it stuck non-empty and leak into a later,
-                    // unrelated gesture.
-                    val trackedPointerPositions = mutableMapOf<PointerId, Offset>()
-                    var isPanning = false
-                    var lastPanCentroid: Offset? = null
-
                     fun centroidOf(positions: Collection<Offset>) = Offset(
                         positions.map { it.x }.average().toFloat(),
                         positions.map { it.y }.average().toFloat()
                     )
 
+                    // Outer loop: wait for a genuinely new gesture. Gating on
+                    // PointerEventType.Press (not merely "no pointers look
+                    // pressed right now") matters: a momentary miscount in one
+                    // event's `changes` — e.g. reporting 0 while fingers are
+                    // physically still down — must never be mistaken for a
+                    // fresh touch, or an already-down finger would look
+                    // "newly pressed" and start a stray stroke. If that ever
+                    // happens the inner loop below simply exits early and
+                    // this outer wait ignores the resulting non-Press event,
+                    // leaving that finger inert until it's actually released
+                    // — a stalled gesture, never a spurious mark.
                     while (true) {
-                        val event = awaitPointerEvent()
-                        val activeChanges = event.changes.filter { it.pressed }
-                        val activeCount = activeChanges.size
+                        var event = awaitPointerEvent()
+                        if (event.type != PointerEventType.Press) continue
+                        if (event.changes.none { it.pressed }) continue
 
-                        for (change in event.changes) {
-                            if (change.pressed) {
-                                trackedPointerPositions[change.id] = change.position
-                            } else {
-                                trackedPointerPositions.remove(change.id)
-                            }
-                        }
+                        // All gesture state lives here, freshly declared for
+                        // every new gesture — nothing can leak from a
+                        // previous one.
+                        val pointerStates = mutableMapOf<PointerId, PointerGestureState>()
+                        // Latest known position of every pointer currently
+                        // pressed, accumulated across the whole gesture (not
+                        // just while panning). Individual events aren't
+                        // guaranteed to report every still-pressed pointer's
+                        // status: when several fingers land within the same
+                        // frame, one event can report only the finger(s) that
+                        // changed in that specific tick. Counting fingers from
+                        // a single event's `changes` alone can therefore
+                        // undercount fingers that landed moments earlier —
+                        // missing the pan threshold entirely, or (during an
+                        // active pan) averaging in stale positions and making
+                        // the centroid jump. Accumulating instead fixes both.
+                        val trackedPointerPositions = mutableMapOf<PointerId, Offset>()
+                        var isPanning = false
+                        var lastPanCentroid: Offset? = null
 
-                        // Switch to pan as soon as the threshold number of fingers
-                        // is on the screen. Cancel any in-progress strokes — stamps
-                        // already placed via onTap stay committed.
-                        if (!isPanning && trackedPointerPositions.size >= PAN_FINGER_COUNT) {
-                            isPanning = true
-                            if (!currentIsStampTool) {
-                                onDrawCancelAll()
-                            }
-                            for (state in pointerStates.values) {
-                                state.committedFill?.let { currentOnFloodFillCancel(it) }
-                            }
-                            pointerStates.clear()
-                            lastPanCentroid = centroidOf(trackedPointerPositions.values)
-                        }
+                        // Inner loop: handle this one gesture, from its first
+                        // press to its last release.
+                        while (true) {
+                            val activeChanges = event.changes.filter { it.pressed }
+                            val activeCount = activeChanges.size
 
-                        if (isPanning) {
-                            if (trackedPointerPositions.size >= 2) {
-                                val centroid = centroidOf(trackedPointerPositions.values)
-                                lastPanCentroid?.let { onPanDelta(centroid - it) }
-                                lastPanCentroid = centroid
-                            } else {
-                                // Fewer than 2 fingers — pause panning until either
-                                // more fingers return or all are released.
-                                lastPanCentroid = null
-                            }
-                        } else {
-                            // Newly-pressed pointers: start a stroke or place a stamp.
                             for (change in event.changes) {
-                                if (!change.previousPressed && change.pressed) {
+                                if (change.pressed) {
+                                    trackedPointerPositions[change.id] = change.position
+                                } else {
+                                    trackedPointerPositions.remove(change.id)
+                                }
+                            }
+
+                            // Switch to pan as soon as the threshold number of
+                            // fingers is on the screen. Cancel any in-progress
+                            // strokes — stamps already placed via onTap stay
+                            // committed.
+                            if (!isPanning && trackedPointerPositions.size >= PAN_FINGER_COUNT) {
+                                isPanning = true
+                                if (!currentIsStampTool) {
+                                    onDrawCancelAll()
+                                }
+                                for (state in pointerStates.values) {
+                                    state.committedFill?.let { currentOnFloodFillCancel(it) }
+                                }
+                                pointerStates.clear()
+                                lastPanCentroid = centroidOf(trackedPointerPositions.values)
+                            }
+
+                            if (isPanning) {
+                                if (trackedPointerPositions.size >= 2) {
+                                    val centroid = centroidOf(trackedPointerPositions.values)
+                                    lastPanCentroid?.let { onPanDelta(centroid - it) }
+                                    lastPanCentroid = centroid
+                                } else {
+                                    // Fewer than 2 fingers — pause panning until
+                                    // either more fingers return or all are
+                                    // released.
+                                    lastPanCentroid = null
+                                }
+                            } else {
+                                // Newly-pressed pointers: start a stroke or place a stamp.
+                                for (change in event.changes) {
+                                    if (!change.previousPressed && change.pressed) {
+                                        val worldPos = Offset(
+                                            change.position.x - currentPanOffset.x,
+                                            change.position.y - currentPanOffset.y
+                                        )
+                                        val state = PointerGestureState(change.position)
+                                        pointerStates[change.id] = state
+                                        if (currentIsStampTool) {
+                                            onTap(worldPos)
+                                            currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            state.lastStampPos = worldPos
+                                        } else if (currentIsFloodFillTool) {
+                                            val viewportWorldRect = Rect(
+                                                left = -currentPanOffset.x,
+                                                top = -currentPanOffset.y,
+                                                right = -currentPanOffset.x + canvasSize.width,
+                                                bottom = -currentPanOffset.y + canvasSize.height
+                                            )
+                                            val fill = computeFloodFill(
+                                                actions = currentActions,
+                                                viewportWorldRect = viewportWorldRect,
+                                                startWorldPos = worldPos,
+                                                fillColor = currentFillColor,
+                                            )
+                                            if (fill != null) {
+                                                currentOnFloodFill(fill)
+                                                currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                state.committedFill = fill
+                                            }
+                                        } else {
+                                            onDrawStart(change.id.value, worldPos)
+                                        }
+                                    }
+                                }
+
+                                // Active pointers: extend stroke or sprinkle stamps.
+                                for (change in event.changes) {
+                                    if (!change.pressed || !change.previousPressed) continue
+                                    val state = pointerStates[change.id] ?: continue
                                     val worldPos = Offset(
                                         change.position.x - currentPanOffset.x,
                                         change.position.y - currentPanOffset.y
                                     )
-                                    val state = PointerGestureState(change.position)
-                                    pointerStates[change.id] = state
                                     if (currentIsStampTool) {
-                                        onTap(worldPos)
-                                        currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        state.lastStampPos = worldPos
+                                        val last = state.lastStampPos
+                                        if (last != null) {
+                                            val distance = (worldPos - last).getDistance()
+                                            if (distance >= currentStampMinDistance) {
+                                                onTap(worldPos)
+                                                currentHaptic.performHapticFeedback(
+                                                    HapticFeedbackType.TextHandleMove
+                                                )
+                                                state.lastStampPos = worldPos
+                                            }
+                                        }
                                     } else if (currentIsFloodFillTool) {
-                                        val viewportWorldRect = Rect(
-                                            left = -currentPanOffset.x,
-                                            top = -currentPanOffset.y,
-                                            right = -currentPanOffset.x + canvasSize.width,
-                                            bottom = -currentPanOffset.y + canvasSize.height
-                                        )
-                                        val fill = computeFloodFill(
-                                            actions = currentActions,
-                                            viewportWorldRect = viewportWorldRect,
-                                            startWorldPos = worldPos,
-                                            fillColor = currentFillColor,
-                                        )
-                                        if (fill != null) {
-                                            currentOnFloodFill(fill)
-                                            currentHaptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            state.committedFill = fill
-                                        }
+                                        // Flood fill fires once on touch-down; dragging
+                                        // the same finger doesn't repeat it.
                                     } else {
-                                        onDrawStart(change.id.value, worldPos)
+                                        val dx = change.position.x - state.startScreenPos.x
+                                        val dy = change.position.y - state.startScreenPos.y
+                                        if (dx * dx + dy * dy > 64f) {
+                                            state.hasMoved = true
+                                        }
+                                        onDrawMove(change.id.value, worldPos)
                                     }
                                 }
-                            }
 
-                            // Active pointers: extend stroke or sprinkle stamps.
-                            for (change in event.changes) {
-                                if (!change.pressed || !change.previousPressed) continue
-                                val state = pointerStates[change.id] ?: continue
-                                val worldPos = Offset(
-                                    change.position.x - currentPanOffset.x,
-                                    change.position.y - currentPanOffset.y
-                                )
-                                if (currentIsStampTool) {
-                                    val last = state.lastStampPos
-                                    if (last != null) {
-                                        val distance = (worldPos - last).getDistance()
-                                        if (distance >= currentStampMinDistance) {
-                                            onTap(worldPos)
-                                            currentHaptic.performHapticFeedback(
-                                                HapticFeedbackType.TextHandleMove
+                                // Released pointers: commit the stroke, or emit a dot
+                                // if the finger never moved (brush/eraser only).
+                                for (change in event.changes) {
+                                    if (!change.previousPressed || change.pressed) continue
+                                    val state = pointerStates.remove(change.id) ?: continue
+                                    if (!currentIsStampTool && !currentIsFloodFillTool) {
+                                        if (!state.hasMoved) {
+                                            onDrawCancel(change.id.value)
+                                            val worldPos = Offset(
+                                                state.startScreenPos.x - currentPanOffset.x,
+                                                state.startScreenPos.y - currentPanOffset.y
                                             )
-                                            state.lastStampPos = worldPos
+                                            onTap(worldPos)
+                                        } else {
+                                            onDrawEnd(change.id.value)
                                         }
                                     }
-                                } else if (currentIsFloodFillTool) {
-                                    // Flood fill fires once on touch-down; dragging
-                                    // the same finger doesn't repeat it.
-                                } else {
-                                    val dx = change.position.x - state.startScreenPos.x
-                                    val dy = change.position.y - state.startScreenPos.y
-                                    if (dx * dx + dy * dy > 64f) {
-                                        state.hasMoved = true
-                                    }
-                                    onDrawMove(change.id.value, worldPos)
                                 }
                             }
 
-                            // Released pointers: commit the stroke, or emit a dot
-                            // if the finger never moved (brush/eraser only).
-                            for (change in event.changes) {
-                                if (!change.previousPressed || change.pressed) continue
-                                val state = pointerStates.remove(change.id) ?: continue
-                                if (!currentIsStampTool && !currentIsFloodFillTool) {
-                                    if (!state.hasMoved) {
-                                        onDrawCancel(change.id.value)
-                                        val worldPos = Offset(
-                                            state.startScreenPos.x - currentPanOffset.x,
-                                            state.startScreenPos.y - currentPanOffset.y
-                                        )
-                                        onTap(worldPos)
-                                    } else {
-                                        onDrawEnd(change.id.value)
-                                    }
-                                }
-                            }
-                        }
+                            event.changes.forEach { it.consume() }
 
-                        // Once every finger is gone, reset for the next gesture.
-                        if (activeCount == 0) {
-                            pointerStates.clear()
-                            trackedPointerPositions.clear()
-                            isPanning = false
-                            lastPanCentroid = null
+                            if (activeCount == 0) break
+                            event = awaitPointerEvent()
                         }
-
-                        event.changes.forEach { it.consume() }
                     }
                 }
             }
